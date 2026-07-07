@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { parsePathParamNames, syncPathParams, applyPathParams, resolvePathAndQueryParams } from './pathParams';
+import {
+  parsePathParamNames,
+  syncPathParams,
+  applyPathParams,
+  resolvePathAndQueryParams,
+  buildRequestUrl
+} from './pathParams';
 
 describe('parsePathParamNames', () => {
   it('extracts a single path param', () => {
@@ -211,5 +217,139 @@ describe('resolvePathAndQueryParams', () => {
 
   it('returns empty arrays for no params and no URL path segments', () => {
     expect(resolvePathAndQueryParams(undefined, undefined)).toEqual({ path: [], query: [] });
+  });
+});
+
+describe('buildRequestUrl', () => {
+  const path = (name: string, value: string, extra: object = {}): any => ({
+    name,
+    value,
+    type: 'path',
+    ...extra
+  });
+  const query = (name: string, value: string, extra: object = {}): any => ({
+    name,
+    value,
+    type: 'query',
+    ...extra
+  });
+
+  it('appends enabled query params to a URL with no existing query (AC #1)', () => {
+    expect(
+      buildRequestUrl('https://api.com/users/search', [
+        query('q', 'alice'),
+        query('role', 'admin'),
+        query('status', 'active')
+      ])
+    ).toBe('https://api.com/users/search?q=alice&role=admin&status=active');
+  });
+
+  it('excludes disabled query params (AC #1)', () => {
+    expect(
+      buildRequestUrl('https://api.com/users/search', [
+        query('q', 'alice'),
+        query('verbose', 'true', { disabled: true })
+      ])
+    ).toBe('https://api.com/users/search?q=alice');
+  });
+
+  it('substitutes path params into the path (AC #2)', () => {
+    expect(
+      buildRequestUrl('https://jsonplaceholder.typicode.com/posts/:postId', [path('postId', '1')])
+    ).toBe('https://jsonplaceholder.typicode.com/posts/1');
+  });
+
+  it('handles path and query params together', () => {
+    expect(
+      buildRequestUrl('https://api.com/users/:userId/posts', [
+        path('userId', '7'),
+        query('page', '2')
+      ])
+    ).toBe('https://api.com/users/7/posts?page=2');
+  });
+
+  it('returns the URL unchanged when there are no params (AC #4)', () => {
+    expect(buildRequestUrl('https://api.com/health', [])).toBe('https://api.com/health');
+    expect(buildRequestUrl('https://api.com/health', undefined)).toBe('https://api.com/health');
+  });
+
+  it('returns the URL unchanged when only disabled query params exist (AC #4)', () => {
+    expect(
+      buildRequestUrl('https://api.com/health', [query('debug', '1', { disabled: true })])
+    ).toBe('https://api.com/health');
+  });
+
+  it('preserves a query key typed in the URL that the array does not redeclare', () => {
+    expect(
+      buildRequestUrl('https://api.com/search?expand=true', [query('q', 'alice')])
+    ).toBe('https://api.com/search?expand=true&q=alice');
+  });
+
+  it('lets the params array override a same-named URL query key (no duplicate)', () => {
+    expect(
+      buildRequestUrl('https://api.com/search?page=1', [query('page', '5')])
+    ).toBe('https://api.com/search?page=5');
+  });
+
+  it('leaves a URL with an existing query untouched when there are no params (AC #4)', () => {
+    expect(buildRequestUrl('https://api.com/search?foo=bar', [])).toBe(
+      'https://api.com/search?foo=bar'
+    );
+  });
+
+  it('dedupes against a percent-encoded URL key that matches a param name', () => {
+    expect(buildRequestUrl('https://api.com/s?my%20param=old', [query('my param', 'new')])).toBe(
+      'https://api.com/s?my%20param=new'
+    );
+  });
+
+  it('treats a plus-encoded URL key as a space when deduping', () => {
+    expect(buildRequestUrl('https://api.com/s?my+param=old', [query('my param', 'new')])).toBe(
+      'https://api.com/s?my%20param=new'
+    );
+  });
+
+  it('preserves a URL-only key verbatim when encode=false', () => {
+    expect(
+      buildRequestUrl('https://api.com/s?keep=1', [query('q', 'x')], { encode: false })
+    ).toBe('https://api.com/s?keep=1&q=x');
+  });
+
+  it('URL-encodes query names and values by default', () => {
+    expect(buildRequestUrl('https://api.com/s', [query('q', 'a b&c')])).toBe(
+      'https://api.com/s?q=a%20b%26c'
+    );
+  });
+
+  it('does not encode when encode=false', () => {
+    expect(
+      buildRequestUrl('https://api.com/files/:name', [path('name', 'a b'), query('q', 'x y')], {
+        encode: false
+      })
+    ).toBe('https://api.com/files/a b?q=x y');
+  });
+
+  it('leaves a :segment literal when its path param is missing, still appends query', () => {
+    expect(buildRequestUrl('https://api.com/posts/:postId', [query('q', 'x')])).toBe(
+      'https://api.com/posts/:postId?q=x'
+    );
+  });
+
+  it('preserves a fragment after appending query params', () => {
+    expect(buildRequestUrl('https://api.com/docs#section', [query('q', 'x')])).toBe(
+      'https://api.com/docs?q=x#section'
+    );
+  });
+
+  it('keeps {{variable}} templates in the URL untouched', () => {
+    expect(buildRequestUrl('{{host}}/api/users/search', [query('q', 'alice')])).toBe(
+      '{{host}}/api/users/search?q=alice'
+    );
+  });
+
+  it('handles empty / nullish urls', () => {
+    expect(buildRequestUrl('', [query('q', 'x')])).toBe('');
+    expect(buildRequestUrl(undefined, [query('q', 'x')])).toBe('');
+    expect(buildRequestUrl(null, [query('q', 'x')])).toBe('');
   });
 });

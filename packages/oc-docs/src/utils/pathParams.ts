@@ -130,3 +130,59 @@ export const applyPathParams = (
 
   return newPath + rest;
 };
+
+/**
+ * Build the URL that is actually sent: substitute `:name` path params into the
+ * path and append enabled query params to the query string.
+ *
+ * - Path params delegate to {@link applyPathParams} (disabled or unmatched ones
+ *   stay literal).
+ * - Only enabled query params are appended; a param replaces the same-named key
+ *   already in the URL, and URL-only keys are kept.
+ * - With no applicable params the URL is returned unchanged.
+ */
+export const buildRequestUrl = (
+  url: string | undefined | null,
+  params: HttpRequestParam[] | undefined,
+  options: { encode?: boolean } = {}
+): string => {
+  if (!url || typeof url !== 'string') return url ?? '';
+
+  const { encode = true } = options;
+  const withPath = applyPathParams(url, params, { encode });
+
+  const queryParams = (params ?? []).filter((p) => p?.type === 'query' && !p.disabled && p.name);
+  if (queryParams.length === 0) return withPath;
+
+
+  const hashIndex = withPath.indexOf('#');
+  const fragment = hashIndex === -1 ? '' : withPath.slice(hashIndex);
+  const beforeHash = hashIndex === -1 ? withPath : withPath.slice(0, hashIndex);
+  const qIndex = beforeHash.indexOf('?');
+  const base = qIndex === -1 ? beforeHash : beforeHash.slice(0, qIndex);
+  const existingQuery = qIndex === -1 ? '' : beforeHash.slice(qIndex + 1);
+
+  const arrayNames = new Set(queryParams.map((p) => p.name));
+  const pairs: string[] = [];
+
+  // Keep URL-only keys;
+  for (const pair of existingQuery.split('&')) {
+    if (!pair) continue;
+    let key = pair.split('=')[0].replace(/\+/g, ' ');
+    try {
+      key = decodeURIComponent(key);
+    } catch {
+      // leave a malformed key as-is
+    }
+    if (!arrayNames.has(key)) pairs.push(pair);
+  }
+
+  for (const p of queryParams) {
+    const name = encode ? encodeURIComponent(p.name) : p.name;
+    const value = encode ? encodeURIComponent(p.value ?? '') : p.value ?? '';
+    pairs.push(`${name}=${value}`);
+  }
+
+  const queryString = pairs.join('&');
+  return `${base}${queryString ? `?${queryString}` : ''}${fragment}`;
+};
