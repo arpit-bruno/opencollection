@@ -7,7 +7,7 @@ import type {
 } from '@opencollection/types/common/variables';
 import { MANAGER_LABELS, TYPE_LABELS } from '../constants';
 
-const humanizeType = (type: VariableValueType | undefined): string => (type && TYPE_LABELS[type]) || 'String';
+export const humanizeType = (type: VariableValueType | undefined): string => (type && TYPE_LABELS[type]) || 'String';
 
 const humanizeManager = (type: string | undefined): string => {
   if (!type) return 'External';

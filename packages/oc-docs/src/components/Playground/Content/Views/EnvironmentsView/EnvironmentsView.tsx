@@ -8,9 +8,10 @@ import { EmptyState } from '../../../../../ui/EmptyState/EmptyState';
 import { PropertyTable } from '../../../../PropertyTable/PropertyTable';
 import { EnvPills, EnvPill, EnvTabsArea } from '../../../EnvListStyles/StyledWrapper';
 import { EnvironmentLabel } from '../../../../EnvironmentLabel/EnvironmentLabel';
+import EnvVarCards from './EnvVarCards';
 import { GlobeIcon } from '../../../../../assets/icons';
 import { useAppDispatch } from '../../../../../store/hooks';
-import { isSecretVariable, getEnvironmentVariables, resolveValue } from '../../../../../utils/environments';
+import { isSecretVariable, getEnvironmentVariables, resolveValue, humanizeType } from '../../../../../utils/environments';
 import { updateCollectionEnvironments } from '@slices/playground';
 
 const ENV_TABS = [
@@ -19,13 +20,17 @@ const ENV_TABS = [
   { id: 'external', label: 'External' }
 ] as const;
 
-const variableToRow = (variable: Variable, index: number): KeyValueRow => ({
-  id: `var-${index}`,
-  name: variable.name || '',
-  value: resolveValue(variable.value).value,
-  enabled: !variable.disabled,
-  secret: isSecretVariable(variable)
-});
+const variableToRow = (variable: Variable, index: number): KeyValueRow => {
+  const resolved = resolveValue(variable.value);
+  return {
+    id: `var-${index}`,
+    name: variable.name || '',
+    value: resolved.value,
+    dataType: resolved.value ? humanizeType(resolved.type) : '',
+    enabled: !variable.disabled,
+    secret: isSecretVariable(variable)
+  };
+};
 
 const rowToVariable = (row: KeyValueRow): Variable =>
   ({
@@ -47,9 +52,10 @@ const TabPanel: React.FC<TabPanelProps> = ({ isEmpty, heading, subheading, child
 
 interface EnvironmentsViewProps {
   collection: OpenCollection | null;
+  compact?: boolean;
 }
 
-const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection }) => {
+const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection, compact = false }) => {
   const dispatch = useAppDispatch();
   const [selectedEnvironmentIndex, setSelectedEnvironmentIndex] = useState<number | null>(null);
 
@@ -112,20 +118,27 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection }) => {
     );
   }
 
+  const renderVars = (rows: KeyValueRow[], onChange: (rows: KeyValueRow[]) => void): React.ReactNode =>
+    compact ? (
+      <EnvVarCards rows={rows} onChange={onChange} />
+    ) : (
+      <KeyValueTable
+        data={rows}
+        onChange={onChange}
+        keyPlaceholder="Variable Name"
+        valuePlaceholder="Variable Value"
+        showEnabled={true}
+        disableNewRow={true}
+        disableDelete={true}
+      />
+    );
+
   const panels: Record<string, { contentIndicator: number; content: React.ReactNode }> = {
     variables: {
       contentIndicator: plainRows.length,
       content: (
         <TabPanel isEmpty={!plainRows.length} heading="No variables" subheading="This environment has no variables yet.">
-          <KeyValueTable
-            data={plainRows}
-            onChange={(rows) => commit(rows, secretRows)}
-            keyPlaceholder="Variable Name"
-            valuePlaceholder="Variable Value"
-            showEnabled={true}
-            disableNewRow={true}
-            disableDelete={true}
-          />
+          {renderVars(plainRows, (rows) => commit(rows, secretRows))}
         </TabPanel>
       )
     },
@@ -133,15 +146,7 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection }) => {
       contentIndicator: secretRows.length,
       content: (
         <TabPanel isEmpty={!secretRows.length} heading="No secrets" subheading="This environment has no secret variables yet.">
-          <KeyValueTable
-            data={secretRows}
-            onChange={(rows) => commit(plainRows, rows)}
-            keyPlaceholder="Variable Name"
-            valuePlaceholder="Variable Value"
-            showEnabled={true}
-            disableNewRow={true}
-            disableDelete={true}
-          />
+          {renderVars(secretRows, (rows) => commit(plainRows, rows))}
         </TabPanel>
       )
     },

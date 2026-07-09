@@ -20,6 +20,75 @@ export const EnvTabsArea = styled.div`
   }
 `;
 
+export const EnvCardList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+export const EnvCard = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--oc-border-border1);
+  border-radius: var(--oc-border-radius-md);
+
+  &.disabled {
+    opacity: 0.5;
+  }
+
+  .enabled {
+    margin-top: 2px;
+    cursor: pointer;
+    accent-color: var(--oc-colors-accent);
+    flex-shrink: 0;
+  }
+
+  .body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .name {
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 0;
+    font-family: var(--font-mono);
+    font-size: var(--oc-font-size-sm);
+    font-weight: 500;
+    color: var(--oc-primary-text);
+  }
+
+  .value {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .value-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 0;
+    font-family: var(--font-mono);
+    font-size: var(--oc-font-size-sm);
+    color: var(--oc-text);
+  }
+
+  .datatype {
+    flex-shrink: 0;
+    font-size: var(--oc-font-size-sm);
+    color: var(--oc-colors-text-subtext1);
+  }
+`;
+
 export const EnvPill = styled.button`
   display: inline-flex;
   align-items: center;
