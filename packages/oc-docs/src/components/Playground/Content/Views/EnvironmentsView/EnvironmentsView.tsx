@@ -5,13 +5,12 @@ import type { Variable } from '@opencollection/types/common/variables';
 import KeyValueTable, { KeyValueRow } from '../../../../../ui/KeyValueTable/KeyValueTable';
 import Tabs from '../../../../../ui/Tabs/Tabs';
 import { EmptyState } from '../../../../../ui/EmptyState/EmptyState';
-import { PropertyTable } from '../../../../PropertyTable/PropertyTable';
 import { EnvPills, EnvPill, EnvTabsArea } from '../../../EnvListStyles/StyledWrapper';
 import { EnvironmentLabel } from '../../../../EnvironmentLabel/EnvironmentLabel';
 import EnvVarCards from './EnvVarCards';
 import { GlobeIcon } from '../../../../../assets/icons';
 import { useAppDispatch } from '../../../../../store/hooks';
-import { isSecretVariable, getEnvironmentVariables, resolveValue, humanizeType } from '../../../../../utils/environments';
+import { isSecretVariable, resolveValue, humanizeType } from '../../../../../utils/environments';
 import { updateCollectionEnvironments } from '@slices/playground';
 
 const ENV_TABS = [
@@ -67,14 +66,23 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection, compact
   const allVariables: Variable[] = selectedEnvironment?.variables ?? [];
   const plainRows = allVariables.filter((v) => !isSecretVariable(v)).map(variableToRow);
   const secretRows = allVariables.filter((v) => isSecretVariable(v)).map(variableToRow);
-  const externalGroup = selectedEnvironment ? getEnvironmentVariables(selectedEnvironment).externalSecrets : null;
 
-  const commit = (plain: KeyValueRow[], secrets: KeyValueRow[]) => {
+  const externalRows: KeyValueRow[] = (selectedEnvironment?.externalSecrets?.variables ?? []).map(
+    (variable: any, index: number) => ({
+      id: `ext-${index}`,
+      name: variable.name ?? '',
+      value: variable.secretName ?? '',
+      enabled: variable.enabled !== false,
+      dataType: variable.type ? humanizeType(variable.type) : '',
+      varType: variable.type
+    })
+  );
+
+  const applyToSelectedEnv = (patch: Record<string, unknown>) => {
     if (!collection || selectedEnvironmentIndex === null) return;
 
-    const updatedVariables: Variable[] = [...plain, ...secrets].map(rowToVariable);
     const updatedEnvironments = environments.map((env: Environment, index: number) =>
-      index === selectedEnvironmentIndex ? { ...env, variables: updatedVariables } : env
+      index === selectedEnvironmentIndex ? { ...env, ...patch } : env
     );
     const updatedCollection: OpenCollection = {
       ...collection,
@@ -88,6 +96,22 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection, compact
 
     dispatch(updateCollectionEnvironments(updatedCollection));
   };
+
+  const commit = (plain: KeyValueRow[], secrets: KeyValueRow[]) =>
+    applyToSelectedEnv({ variables: [...plain, ...secrets].map(rowToVariable) });
+
+  const commitExternal = (rows: KeyValueRow[]) =>
+    applyToSelectedEnv({
+      externalSecrets: {
+        ...(selectedEnvironment?.externalSecrets ?? {}),
+        variables: rows.map((row) => ({
+          name: row.name,
+          secretName: row.value,
+          enabled: row.enabled,
+          ...(row.varType ? { type: row.varType } : {})
+        }))
+      }
+    });
 
   useEffect(() => {
     if (selectedEnvironmentIndex === null && environments.length > 0) {
@@ -151,16 +175,10 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection, compact
       )
     },
     external: {
-      contentIndicator: externalGroup?.variables.length ?? 0,
+      contentIndicator: externalRows.length,
       content: (
-        <TabPanel isEmpty={!externalGroup?.variables.length} heading="No external secrets" subheading="This environment has no external secrets configured.">
-          <PropertyTable
-            rows={(externalGroup?.variables ?? []).map((row) => ({
-              label: row.name,
-              value: row.secretName,
-              disabled: row.disabled
-            }))}
-          />
+        <TabPanel isEmpty={!externalRows.length} heading="No external secrets" subheading="This environment has no external secrets configured.">
+          {renderVars(externalRows, commitExternal)}
         </TabPanel>
       )
     }
