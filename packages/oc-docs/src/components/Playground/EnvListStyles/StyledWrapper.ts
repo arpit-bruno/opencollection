@@ -68,11 +68,14 @@ export const EnvCard = styled.div`
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
   }
 
   .value-input {
-    flex: 1;
-    min-width: 0;
+    flex: 0 1 auto;
+    field-sizing: content;
+    min-width: 40px;
+    max-width: 100%;
     border: none;
     outline: none;
     background: transparent;

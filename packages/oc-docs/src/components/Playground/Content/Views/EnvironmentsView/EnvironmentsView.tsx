@@ -154,6 +154,7 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection, compact
         showEnabled={true}
         disableNewRow={true}
         disableDelete={false}
+        additionalColumns={[{ key: 'dataType', label: 'Data Type', render: (row) => <span className="text-readonly">{row.dataType || ''}</span> }]}
       />
     );
 
