@@ -1,13 +1,69 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { OpenCollection } from '@opencollection/types';
 import type { Environment } from '@opencollection/types/config/environments';
 import type { Variable } from '@opencollection/types/common/variables';
 import KeyValueTable, { KeyValueRow } from '../../../../../ui/KeyValueTable/KeyValueTable';
-import { EnvPills, EnvPill } from '../../../EnvListStyles/StyledWrapper';
+import Tabs from '../../../../../ui/Tabs/Tabs';
+import { EmptyState } from '../../../../../ui/EmptyState/EmptyState';
+import { PropertyTable } from '../../../../PropertyTable/PropertyTable';
+import { EnvPills, EnvPill, EnvTabsArea } from '../../../EnvListStyles/StyledWrapper';
 import { EnvironmentLabel } from '../../../../EnvironmentLabel/EnvironmentLabel';
+import { GlobeIcon } from '../../../../../assets/icons';
 import { useAppDispatch } from '../../../../../store/hooks';
-import { isSecretVariable } from '../../../../../utils/environments';
+import { isSecretVariable, getEnvironmentVariables } from '../../../../../utils/environments';
 import { updateCollectionEnvironments } from '@slices/playground';
+
+const ENV_TABS = [
+  { id: 'variables', label: 'Variables' },
+  { id: 'secrets', label: 'Secrets' },
+  { id: 'external', label: 'External' }
+] as const;
+
+const variableToRow = (variable: Variable, index: number): KeyValueRow => {
+  let value = '';
+  if (variable.value) {
+    if (typeof variable.value === 'string') {
+      value = variable.value;
+    } else if (typeof variable.value === 'object' && 'type' in variable.value) {
+      value = variable.value.data || '';
+    } else if (Array.isArray(variable.value)) {
+      const selected = variable.value.find((v) => v.selected) || variable.value[0];
+      if (selected) {
+        if (typeof selected.value === 'string') {
+          value = selected.value;
+        } else if (typeof selected.value === 'object' && 'type' in selected.value) {
+          value = selected.value.data || '';
+        }
+      }
+    }
+  }
+
+  return {
+    id: `var-${index}`,
+    name: variable.name || '',
+    value,
+    enabled: !variable.disabled,
+    secret: isSecretVariable(variable)
+  };
+};
+
+const rowToVariable = (row: KeyValueRow): Variable =>
+  ({
+    name: row.name,
+    value: row.value,
+    disabled: !row.enabled,
+    ...(row.secret ? { secret: true } : {})
+  } as Variable);
+
+interface TabPanelProps {
+  isEmpty: boolean;
+  heading: string;
+  subheading: string;
+  children: React.ReactNode;
+}
+
+const TabPanel: React.FC<TabPanelProps> = ({ isEmpty, heading, subheading, children }) =>
+  isEmpty ? <EmptyState icon={<GlobeIcon />} heading={heading} subheading={subheading} /> : <>{children}</>;
 
 interface EnvironmentsViewProps {
   collection: OpenCollection | null;
@@ -17,90 +73,35 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection }) => {
   const dispatch = useAppDispatch();
   const [selectedEnvironmentIndex, setSelectedEnvironmentIndex] = useState<number | null>(null);
 
-  const environments = useMemo(() => {
-    // TODO: Remove this
-    const envs = (collection as any).environments || collection?.config?.environments || [];
-    return [...envs];
-  }, [collection]);
+  // TODO: Remove this
+  const environments = (collection as any)?.environments || collection?.config?.environments || [];
+  const selectedEnvironment =
+    selectedEnvironmentIndex !== null ? environments[selectedEnvironmentIndex] ?? null : null;
 
-  const selectedEnvironment = useMemo(() => {
-    if (selectedEnvironmentIndex === null || !environments[selectedEnvironmentIndex]) return null;
-    return { ...environments[selectedEnvironmentIndex] };
-  }, [environments, selectedEnvironmentIndex]);
+  const allVariables: Variable[] = selectedEnvironment?.variables ?? [];
+  const plainRows = allVariables.filter((v) => !isSecretVariable(v)).map(variableToRow);
+  const secretRows = allVariables.filter((v) => isSecretVariable(v)).map(variableToRow);
+  const externalGroup = selectedEnvironment ? getEnvironmentVariables(selectedEnvironment).externalSecrets : null;
 
-  const variableToRow = useCallback((variable: Variable, index: number): KeyValueRow => {
-    let value = '';
-    if (variable.value) {
-      if (typeof variable.value === 'string') {
-        value = variable.value;
-      } else if (typeof variable.value === 'object' && 'type' in variable.value) {
-        value = variable.value.data || '';
-      } else if (Array.isArray(variable.value)) {
-        const selected = variable.value.find(v => v.selected) || variable.value[0];
-        if (selected) {
-          if (typeof selected.value === 'string') {
-            value = selected.value;
-          } else if (typeof selected.value === 'object' && 'type' in selected.value) {
-            value = selected.value.data || '';
-          }
-        }
-      }
-    }
+  const commit = (plain: KeyValueRow[], secrets: KeyValueRow[]) => {
+    if (!collection || selectedEnvironmentIndex === null) return;
 
-    return {
-      id: `var-${index}`,
-      name: variable.name || '',
-      value: value,
-      enabled: !variable.disabled,
-      secret: isSecretVariable(variable)
-    };
-  }, []);
-
-  const rowToVariable = useCallback((row: KeyValueRow): Variable => {
-    return {
-      name: row.name,
-      value: row.value,
-      disabled: !row.enabled,
-      ...(row.secret ? { secret: true } : {})
-    } as Variable;
-  }, []);
-
-  const variablesAsRows = useMemo(() => {
-    if (!selectedEnvironment?.variables) return [];
-    return selectedEnvironment.variables.map((variable: Variable, index: number) => variableToRow(variable, index));
-  }, [selectedEnvironment, variableToRow]);
-
-  const handleVariablesChange = useCallback((rows: KeyValueRow[]) => {
-    if (!selectedEnvironment || !collection || selectedEnvironmentIndex === null) return;
-
-    const updatedVariables: Variable[] = rows.map(rowToVariable);
-
-    const updatedEnvironments = environments.map((env, index) => {
-      if (index === selectedEnvironmentIndex) {
-        return {
-          ...env,
-          variables: updatedVariables
-        };
-      }
-      return env;
-    });
-
+    const updatedVariables: Variable[] = [...plain, ...secrets].map(rowToVariable);
+    const updatedEnvironments = environments.map((env: Environment, index: number) =>
+      index === selectedEnvironmentIndex ? { ...env, variables: updatedVariables } : env
+    );
     const updatedCollection: OpenCollection = {
       ...collection,
-      config: collection.config ? {
-        ...collection.config,
-        environments: updatedEnvironments
-      } : {
-        environments: updatedEnvironments
-      }
+      config: collection.config
+        ? { ...collection.config, environments: updatedEnvironments }
+        : { environments: updatedEnvironments }
     };
-
     if ((collection as any).environments) {
       (updatedCollection as any).environments = updatedEnvironments;
     }
 
     dispatch(updateCollectionEnvironments(updatedCollection));
-  }, [selectedEnvironment, selectedEnvironmentIndex, collection, environments, rowToVariable, dispatch]);
+  };
 
   useEffect(() => {
     if (selectedEnvironmentIndex === null && environments.length > 0) {
@@ -131,6 +132,62 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection }) => {
     );
   }
 
+  const panels: Record<string, { contentIndicator: number; content: React.ReactNode }> = {
+    variables: {
+      contentIndicator: plainRows.length,
+      content: (
+        <TabPanel isEmpty={!plainRows.length} heading="No variables" subheading="This environment has no variables yet.">
+          <KeyValueTable
+            data={plainRows}
+            onChange={(rows) => commit(rows, secretRows)}
+            keyPlaceholder="Variable Name"
+            valuePlaceholder="Variable Value"
+            showEnabled={true}
+            disableNewRow={true}
+            disableDelete={true}
+          />
+        </TabPanel>
+      )
+    },
+    secrets: {
+      contentIndicator: secretRows.length,
+      content: (
+        <TabPanel isEmpty={!secretRows.length} heading="No secrets" subheading="This environment has no secret variables yet.">
+          <KeyValueTable
+            data={secretRows}
+            onChange={(rows) => commit(plainRows, rows)}
+            keyPlaceholder="Variable Name"
+            valuePlaceholder="Variable Value"
+            showEnabled={true}
+            disableNewRow={true}
+            disableDelete={true}
+          />
+        </TabPanel>
+      )
+    },
+    external: {
+      contentIndicator: externalGroup?.variables.length ?? 0,
+      content: (
+        <TabPanel isEmpty={!externalGroup?.variables.length} heading="No external secrets" subheading="This environment has no external secrets configured.">
+          <PropertyTable
+            rows={(externalGroup?.variables ?? []).map((row) => ({
+              label: row.name,
+              value: row.secretName,
+              disabled: row.disabled
+            }))}
+          />
+        </TabPanel>
+      )
+    }
+  };
+
+  const tabs = ENV_TABS.map(({ id, label }) => ({
+    id,
+    label,
+    contentIndicator: panels[id].contentIndicator,
+    content: panels[id].content
+  }));
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', overflow: 'hidden', backgroundColor: 'var(--oc-background-base)' }}>
       <div style={{ padding: '16px 24px 0', flexShrink: 0 }}>
@@ -151,19 +208,9 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection }) => {
         ))}
       </EnvPills>
 
-      <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', minHeight: 0, padding: '0 24px 24px' }}>
+      <EnvTabsArea>
         {selectedEnvironment ? (
-          <div style={{ flex: 1, minHeight: 0 }}>
-            <KeyValueTable
-              data={variablesAsRows}
-              onChange={handleVariablesChange}
-              keyPlaceholder="Variable Name"
-              valuePlaceholder="Variable Value"
-              showEnabled={true}
-              disableNewRow={true}
-              disableDelete={true}
-            />
-          </div>
+          <Tabs defaultActiveTab="variables" tabs={tabs} />
         ) : (
           <div style={{
             display: 'flex',
@@ -175,7 +222,7 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection }) => {
             <p>Select an environment to view its variables</p>
           </div>
         )}
-      </div>
+      </EnvTabsArea>
     </div>
   );
 };

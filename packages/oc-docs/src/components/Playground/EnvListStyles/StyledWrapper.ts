@@ -7,6 +7,19 @@ export const EnvPills = styled.div`
   padding: 16px 24px;
 `;
 
+export const EnvTabsArea = styled.div`
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 24px 24px;
+
+  .tab-content {
+    margin-top: 16px;
+  }
+`;
+
 export const EnvPill = styled.button`
   display: inline-flex;
   align-items: center;
