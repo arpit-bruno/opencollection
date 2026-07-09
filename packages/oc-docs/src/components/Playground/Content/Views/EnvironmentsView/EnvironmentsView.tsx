@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { OpenCollection } from '@opencollection/types';
 import type { Environment } from '@opencollection/types/config/environments';
-import type { Variable } from '@opencollection/types/common/variables';
+import type { Variable, VariableValueType } from '@opencollection/types/common/variables';
 import KeyValueTable, { KeyValueRow } from '../../../../../ui/KeyValueTable/KeyValueTable';
 import Tabs from '../../../../../ui/Tabs/Tabs';
 import { EmptyState } from '../../../../../ui/EmptyState/EmptyState';
@@ -18,6 +18,15 @@ const ENV_TABS = [
   { id: 'secrets', label: 'Secrets' },
   { id: 'external', label: 'External' }
 ] as const;
+
+type EnvTabId = (typeof ENV_TABS)[number]['id'];
+
+interface ExternalSecretRow {
+  name?: string;
+  secretName?: string;
+  enabled?: boolean;
+  type?: VariableValueType;
+}
 
 const variableToRow = (variable: Variable, index: number): KeyValueRow => {
   const resolved = resolveValue(variable.value);
@@ -67,7 +76,7 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection, compact
   const secretRows = allVariables.filter((v) => isSecretVariable(v)).map(variableToRow);
 
   const externalRows: KeyValueRow[] = (selectedEnvironment?.externalSecrets?.variables ?? []).map(
-    (variable: any, index: number) => ({
+    (variable: ExternalSecretRow, index: number) => ({
       id: `ext-${index}`,
       name: variable.name ?? '',
       value: variable.secretName ?? '',
@@ -148,7 +157,7 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection, compact
       />
     );
 
-  const panels: Record<string, { contentIndicator: number; content: React.ReactNode }> = {
+  const panels: Record<EnvTabId, { contentIndicator: number; content: React.ReactNode }> = {
     variables: {
       contentIndicator: plainRows.length,
       content: (
