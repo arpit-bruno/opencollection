@@ -58,7 +58,6 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection, compact
   const dispatch = useAppDispatch();
   const [selectedEnvironmentIndex, setSelectedEnvironmentIndex] = useState<number | null>(null);
 
-  // TODO: Remove this
   const environments = (collection as any)?.environments || collection?.config?.environments || [];
   const selectedEnvironment =
     selectedEnvironmentIndex !== null ? environments[selectedEnvironmentIndex] ?? null : null;
