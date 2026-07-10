@@ -1,5 +1,69 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
+import styled from '@emotion/styled';
 import KeyValueTable, { type KeyValueRow } from '../../../../../ui/KeyValueTable/KeyValueTable';
+import { VariableText } from '../../../../VariableText/VariableText';
+
+const Wrapper = styled.div`
+  .section-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+
+  .key-value-table thead {
+    display: none;
+  }
+
+  .path-card {
+    border: 1px solid var(--border-color);
+    border-radius: var(--oc-radius);
+    overflow: hidden;
+  }
+
+  .path-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.625rem 0.875rem;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+  }
+
+  .path-row + .path-row {
+    border-top: 1px solid var(--border-color);
+  }
+
+  .path-key {
+    width: 35%;
+    flex-shrink: 0;
+    color: var(--text-primary);
+  }
+
+  .path-value {
+    flex: 1;
+    min-width: 0;
+    color: var(--text-secondary);
+    cursor: text;
+  }
+
+  .path-placeholder {
+    color: var(--text-tertiary);
+  }
+
+  .path-input {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--text-primary);
+  }
+`;
 
 interface ParamsTabProps {
   params: Array<{ name?: string; value?: string; disabled?: boolean; type?: string }>;
@@ -7,60 +71,6 @@ interface ParamsTabProps {
   title?: string;
   description?: string;
 }
-
-interface ParamsSectionProps {
-  title: string;
-  description?: string;
-  data: KeyValueRow[];
-  onChange: (rows: KeyValueRow[]) => void;
-  keyLabel?: string;
-  showEnabled?: boolean;
-  showActions?: boolean;
-  disableNewRow?: boolean;
-  readOnlyKey?: boolean;
-}
-
-/**
- * A single labelled key/value table. Memoized so that editing one params table
- * (e.g. query) doesn't force the sibling table (e.g. path) to re-render while
- * its data/handler references are unchanged.
- */
-const ParamsSection: React.FC<ParamsSectionProps> = React.memo(({
-  title,
-  description,
-  data,
-  onChange,
-  keyLabel = 'Key',
-  showEnabled = true,
-  showActions = true,
-  disableNewRow = false,
-  readOnlyKey = false
-}) => (
-  <div className="space-y-3">
-    <div className="flex items-center justify-between mb-2">
-      <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-        {title}
-      </span>
-      {description && (
-        <span className="text-xs leading-tight" style={{ color: 'var(--text-secondary)' }}>
-          {description}
-        </span>
-      )}
-    </div>
-    <KeyValueTable
-      data={data}
-      onChange={onChange}
-      keyPlaceholder={keyLabel}
-      valuePlaceholder="Value"
-      showEnabled={showEnabled}
-      showActions={showActions}
-      disableNewRow={disableNewRow}
-      readOnlyKey={readOnlyKey}
-    />
-  </div>
-));
-
-ParamsSection.displayName = 'ParamsSection';
 
 export const ParamsTab: React.FC<ParamsTabProps> = ({
   params,
@@ -88,8 +98,7 @@ export const ParamsTab: React.FC<ParamsTabProps> = ({
     return { queryData, pathData };
   }, [params]);
 
-  // Each table only owns its own subset, so on change we re-tag the edited rows
-  // and merge them back with the untouched sibling rows before bubbling up.
+
   const handleQueryChange = useCallback(
     (rows: KeyValueRow[]) => {
       const queryRows = (rows ?? []).map((row) => ({ ...row, type: 'query' }));
@@ -98,41 +107,72 @@ export const ParamsTab: React.FC<ParamsTabProps> = ({
     [onParamsChange, pathData]
   );
 
-  const handlePathChange = useCallback(
-    (rows: KeyValueRow[]) => {
-      const pathRows = (rows ?? []).map((row) => ({ ...row, type: 'path' }));
+  const [editingPathId, setEditingPathId] = useState<string | null>(null);
+
+  const handlePathValueChange = useCallback(
+    (id: string, value: string) => {
+      const pathRows = pathData.map((row) => (row.id === id ? { ...row, value } : row));
       onParamsChange([...queryData, ...pathRows]);
     },
-    [onParamsChange, queryData]
+    [onParamsChange, queryData, pathData]
   );
 
   const hasPath = pathData.length > 0;
 
   return (
-    <div className="space-y-4">
-      {/* Query table: always shown so query params can be viewed/added
-          regardless of whether the request currently has any. */}
-      <ParamsSection
-        title={title}
-        description={description}
-        data={queryData}
-        onChange={handleQueryChange}
-      />
-
-      {/* Path table: only shown when the URL actually defines path params. */}
+    <Wrapper className="space-y-4">
       {hasPath && (
-        <ParamsSection
-          title="Path"
-          data={pathData}
-          onChange={handlePathChange}
-          keyLabel="Name"
-          showEnabled={false}
-          showActions={false}
-          disableNewRow={true}
-          readOnlyKey={true}
-        />
+        <div className="space-y-2">
+          <span className="section-label">Path</span>
+          <div className="path-card">
+            {pathData.map((row) => (
+              <div key={row.id} className="path-row">
+                <span className="path-key">{row.name}</span>
+                {editingPathId === row.id ? (
+                  <input
+                    className="path-input"
+                    autoFocus
+                    value={row.value}
+                    placeholder="Add value"
+                    onChange={(e) => handlePathValueChange(row.id, e.target.value)}
+                    onBlur={() => setEditingPathId(null)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') setEditingPathId(null); }}
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                ) : (
+                  <span
+                    className="path-value"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setEditingPathId(row.id)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingPathId(row.id); } }}
+                  >
+                    {row.value ? <VariableText value={row.value} /> : <span className="path-placeholder">Add value</span>}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
-    </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="section-label">{title}</span>
+          {description && (
+            <span className="text-xs leading-tight" style={{ color: 'var(--text-secondary)' }}>{description}</span>
+          )}
+        </div>
+        <KeyValueTable
+          data={queryData}
+          onChange={handleQueryChange}
+          keyPlaceholder="Key"
+          valuePlaceholder="Value"
+          showEnabled={true}
+        />
+      </div>
+    </Wrapper>
   );
 };
 
