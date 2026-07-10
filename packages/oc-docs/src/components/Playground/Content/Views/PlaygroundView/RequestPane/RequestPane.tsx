@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { HttpRequest } from '@opencollection/types/requests/http';
 import type { Assertion } from '@opencollection/types/common/assertions';
 import Tabs from '../../../../../../ui/Tabs/Tabs';
+import Dropdown from '../../../../../../ui/Dropdown/Dropdown';
 import { StyledWrapper } from './StyledWrapper';
 import { KeyValueRow } from '../../../../../../ui/KeyValueTable/KeyValueTable';
 import HeadersTab from '../../Common/HeadersTab';
@@ -30,6 +31,28 @@ interface RequestPaneProps {
   item: HttpRequest;
   onItemChange: (item: HttpRequest) => void;
 }
+
+const BODY_TYPE_GROUPS: { group: string; items: { id: string; label: string; glyph?: string }[] }[] = [
+  { group: 'Form', items: [{ id: 'form-urlencoded', label: 'Form URL Encoded' }] },
+  {
+    group: 'Raw',
+    items: [
+      { id: 'json', label: 'JSON', glyph: '{ }' },
+      { id: 'xml', label: 'XML', glyph: '</>' },
+      { id: 'text', label: 'Text' },
+      { id: 'sparql', label: 'SPARQL' }
+    ]
+  },
+  { group: 'Other', items: [{ id: 'none', label: 'No Body' }] }
+];
+
+const bodyTypeLabel = (id: string): string => {
+  for (const group of BODY_TYPE_GROUPS) {
+    const item = group.items.find((i) => i.id === id);
+    if (item) return item.glyph ? `${item.glyph} ${item.label}` : item.label;
+  }
+  return 'No Body';
+};
 
 const RequestPane: React.FC<RequestPaneProps> = ({ item, onItemChange }) => {
   const [activeTab, setActiveTab] = useState('params');
@@ -132,21 +155,30 @@ const RequestPane: React.FC<RequestPaneProps> = ({ item, onItemChange }) => {
   };
 
   const renderBodyTypeSelect = () => (
-    <div className="body-type-select">
-      <span className="glyph">{'{ }'}</span>
-      <select value={bodyType} onChange={(e) => handleBodyTypeChange(e.target.value)}>
-        <option value="none">None</option>
-        <option value="json">JSON</option>
-        <option value="text">Text</option>
-        <option value="xml">XML</option>
-        <option value="form-urlencoded">Form URL Encoded</option>
-        <option value="sparql">SPARQL</option>
-      </select>
-      <svg className="chevron" width="12" height="12" viewBox="0 0 24 24" fill="none"
-        stroke="var(--oc-colors-text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="6 9 12 15 18 9" />
-      </svg>
-    </div>
+    <Dropdown label={bodyTypeLabel(bodyType)} active={bodyType !== 'none'} menuLabel="Body type" align="right" testId="body-type-select">
+      {({ close }) =>
+        BODY_TYPE_GROUPS.map((group) => (
+          <React.Fragment key={group.group}>
+            <li className="dropdown-group-label" aria-hidden="true">{group.group}</li>
+            {group.items.map((it) => (
+              <li key={it.id} role="option" aria-selected={it.id === bodyType}>
+                <button
+                  type="button"
+                  className={`dropdown-option${it.id === bodyType ? ' is-selected' : ''}`}
+                  onClick={() => {
+                    handleBodyTypeChange(it.id);
+                    close();
+                  }}
+                >
+                  <span className="dropdown-label">{it.label}</span>
+                  {it.id === bodyType && <span className="dropdown-check" aria-hidden="true">✓</span>}
+                </button>
+              </li>
+            ))}
+          </React.Fragment>
+        ))
+      }
+    </Dropdown>
   );
 
   const renderParams = () => (

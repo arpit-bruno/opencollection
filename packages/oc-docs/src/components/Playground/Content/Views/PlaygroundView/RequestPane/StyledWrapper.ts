@@ -16,43 +16,4 @@ export const StyledWrapper = styled.div`
   .oc-tabs .tab {
     flex-shrink: 0;
   }
-
-  .body-type-select {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-  }
-
-  .body-type-select .glyph {
-    position: absolute;
-    left: 8px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--text-secondary);
-    pointer-events: none;
-  }
-
-  .body-type-select select {
-    appearance: none;
-    border: none;
-    outline: none;
-    cursor: pointer;
-    background: transparent;
-    color: var(--text-primary);
-    font-size: 12px;
-    font-weight: 500;
-    padding: 2px 22px 2px 28px;
-    border-radius: 5px;
-    transition: background-color 0.15s ease;
-  }
-
-  .body-type-select select:hover {
-    background: color-mix(in srgb, var(--oc-text) 6%, transparent);
-  }
-
-  .body-type-select .chevron {
-    position: absolute;
-    right: 8px;
-    pointer-events: none;
-  }
 `;

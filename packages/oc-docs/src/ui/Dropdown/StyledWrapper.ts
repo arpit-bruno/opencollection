@@ -57,6 +57,10 @@ export const StyledWrapper = styled.div`
     border: 1px solid var(--oc-border-border1);
     border-radius: 8px;
   }
+  .dropdown-menu.align-right {
+    left: auto;
+    right: 0;
+  }
 
   .dropdown-option {
     display: flex;
@@ -103,6 +107,21 @@ export const StyledWrapper = styled.div`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .dropdown-group-label {
+    padding: 6px 8px 2px;
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--oc-colors-text-subtext1);
+  }
+
+  .dropdown-check {
+    margin-left: auto;
+    color: var(--oc-accents-primary);
   }
 
   @media (max-width: 767px) {
