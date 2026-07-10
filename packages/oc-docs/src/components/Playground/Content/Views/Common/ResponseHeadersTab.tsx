@@ -35,7 +35,9 @@ const Wrapper = styled.div`
     flex: 1;
     min-width: 0;
     color: var(--text-secondary);
-    word-break: break-all;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 `;
 
@@ -56,7 +58,7 @@ const ResponseHeadersTab: React.FC<ResponseHeadersTabProps> = ({ headers }) => {
         {entries.map(([key, value]) => (
           <div key={key} className="header-row">
             <span className="header-key">{key}</span>
-            <span className="header-value">{String(value)}</span>
+            <span className="header-value" title={String(value)}>{String(value)}</span>
           </div>
         ))}
       </div>

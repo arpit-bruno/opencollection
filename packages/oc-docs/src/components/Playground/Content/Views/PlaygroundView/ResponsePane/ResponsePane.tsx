@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Tabs from '../../../../../../ui/Tabs/Tabs';
-import ResponseBodyTab from '../../Common/ResponseBodyTab';
+import Dropdown from '../../../../../../ui/Dropdown/Dropdown';
+import ResponseBodyTab, { languageForContentType } from '../../Common/ResponseBodyTab';
 import ResponseHeadersTab from '../../Common/ResponseHeadersTab';
 import TestResultsTab from '../../Common/TestResultsTab';
 import ErrorBanner from '../../../../../../ui/ErrorBanner/ErrorBanner';
@@ -10,19 +11,31 @@ interface ResponsePaneProps {
   isLoading: boolean;
 }
 
+const RESPONSE_FORMATS: { id: string; label: string; glyph?: string }[] = [
+  { id: 'json', label: 'JSON', glyph: '{ }' },
+  { id: 'xml', label: 'XML', glyph: '</>' },
+  { id: 'html', label: 'HTML' },
+  { id: 'text', label: 'Text' }
+];
+
+const formatLabel = (id: string): string => {
+  const format = RESPONSE_FORMATS.find((option) => option.id === id);
+  if (!format) return 'Text';
+  return format.glyph ? `${format.glyph} ${format.label}` : format.label;
+};
+
 const ResponsePane: React.FC<ResponsePaneProps> = ({ response, isLoading }) => {
   const [activeTab, setActiveTab] = useState('response');
+  const [format, setFormat] = useState<string | null>(null);
 
   const getStatusColor = (status?: number) => {
     if (!status) return 'var(--oc-request-tab-panel-response-status)';
     if (status >= 200 && status < 300) return 'var(--oc-request-tab-panel-response-ok)';
     if (status >= 300 && status < 400) return 'var(--oc-colors-text-warning)';
-    if (status >= 400 && status < 500) return 'var(--oc-request-tab-panel-response-error)';
-    if (status >= 500) return 'var(--oc-request-tab-panel-response-error)';
+    if (status >= 400) return 'var(--oc-request-tab-panel-response-error)';
     return 'var(--oc-request-tab-panel-response-status)';
   };
 
-  // Handle loading, empty, and error states
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -53,48 +66,17 @@ const ResponsePane: React.FC<ResponsePaneProps> = ({ response, isLoading }) => {
   // Response tab, keeping the same tab shell as a successful response.
   const renderErrorBanner = () => (
     <div className="p-4">
-      <ErrorBanner
-        title={response.errorTitle || 'Request Failed'}
-        message={response.error}
-      />
+      <ErrorBanner title={response.errorTitle || 'Request Failed'} message={response.error} />
     </div>
   );
 
-  const renderResponseBody = () =>
-    response.error ? renderErrorBanner() : <ResponseBodyTab response={response} />;
-  const renderHeaders = () => <ResponseHeadersTab headers={response.headers} />;
-  const renderTestResults = () => (
-    <TestResultsTab 
-      testResults={response.testResults} 
-      assertionResults={response.assertionResults} 
-    />
-  );
+  const contentType = response.headers?.['content-type'] || response.headers?.['Content-Type'] || '';
+  const activeFormat = format || languageForContentType(contentType);
 
-  // Calculate content indicators
   const headersCount = response.headers ? Object.keys(response.headers).length : 0;
   const hasTestResults = response.testResults && response.testResults.results.length > 0;
   const hasAssertionResults = response.assertionResults && response.assertionResults.results.length > 0;
   const testsCount = hasTestResults || hasAssertionResults ? '•' : undefined;
-
-  const tabs = [
-    { 
-      id: 'response', 
-      label: 'Response', 
-      content: renderResponseBody() 
-    },
-    { 
-      id: 'headers', 
-      label: 'Headers', 
-      contentIndicator: headersCount || undefined,
-      content: renderHeaders() 
-    },
-    { 
-      id: 'tests', 
-      label: 'Tests', 
-      contentIndicator: testsCount,
-      content: renderTestResults() 
-    }
-  ];
 
   const statusInfo = (
     <div className="flex items-center gap-3 flex-wrap text-xs font-mono">
@@ -109,6 +91,54 @@ const ResponsePane: React.FC<ResponsePaneProps> = ({ response, isLoading }) => {
       )}
     </div>
   );
+
+  const formatSelector = (
+    <Dropdown label={formatLabel(activeFormat)} active menuLabel="Response format" align="right" testId="response-format">
+      {({ close }) =>
+        RESPONSE_FORMATS.map((option) => (
+          <li key={option.id} role="option" aria-selected={option.id === activeFormat}>
+            <button
+              type="button"
+              className={`dropdown-option${option.id === activeFormat ? ' is-selected' : ''}`}
+              onClick={() => {
+                setFormat(option.id);
+                close();
+              }}
+            >
+              <span className="dropdown-label">{option.label}</span>
+              {option.id === activeFormat && <span className="dropdown-check" aria-hidden="true">✓</span>}
+            </button>
+          </li>
+        ))
+      }
+    </Dropdown>
+  );
+
+  const tabs = [
+    {
+      id: 'response',
+      label: 'Response',
+      rightElement: response.error ? undefined : (
+        <div className="flex items-center gap-3">
+          {statusInfo}
+          {formatSelector}
+        </div>
+      ),
+      content: response.error ? renderErrorBanner() : <ResponseBodyTab response={response} language={activeFormat} />
+    },
+    {
+      id: 'headers',
+      label: 'Headers',
+      contentIndicator: headersCount || undefined,
+      content: <ResponseHeadersTab headers={response.headers} />
+    },
+    {
+      id: 'tests',
+      label: 'Tests',
+      contentIndicator: testsCount,
+      content: <TestResultsTab testResults={response.testResults} assertionResults={response.assertionResults} />
+    }
+  ];
 
   return (
     <div className="h-full" style={{ backgroundColor: 'var(--bg-primary)' }}>

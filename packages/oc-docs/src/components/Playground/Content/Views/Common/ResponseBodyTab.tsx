@@ -3,9 +3,10 @@ import Code from '../../../../Code/Code';
 
 interface ResponseBodyTabProps {
   response: any;
+  language?: string;
 }
 
-const languageForContentType = (contentType: string): string => {
+export const languageForContentType = (contentType: string): string => {
   if (contentType.includes('json')) return 'json';
   if (contentType.includes('html')) return 'html';
   if (contentType.includes('xml')) return 'xml';
@@ -14,7 +15,7 @@ const languageForContentType = (contentType: string): string => {
   return 'text';
 };
 
-const ResponseBodyTab: React.FC<ResponseBodyTabProps> = ({ response }) => {
+const ResponseBodyTab: React.FC<ResponseBodyTabProps> = ({ response, language }) => {
   const body =
     typeof response.data === 'string'
       ? response.data
@@ -29,7 +30,7 @@ const ResponseBodyTab: React.FC<ResponseBodyTabProps> = ({ response }) => {
 
   return (
     <div className="py-4">
-      <Code code={body} language={languageForContentType(contentType)} showLineNumbers showCopy testId="response-body" />
+      <Code code={body} language={language || languageForContentType(contentType)} showLineNumbers showCopy testId="response-body" />
     </div>
   );
 };
