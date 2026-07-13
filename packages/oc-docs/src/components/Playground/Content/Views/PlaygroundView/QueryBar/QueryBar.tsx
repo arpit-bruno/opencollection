@@ -61,6 +61,7 @@ const QueryBar: React.FC<QueryBarProps> = ({ item, onSendRequest, isLoading, onI
           value={method}
           onChange={(e) => handleMethodChange(e.target.value)}
           aria-label="HTTP method"
+          data-testid="query-bar-method"
         >
           {Object.keys(methodColorVars).map((m) => (
             <option key={m} value={m}>
@@ -75,6 +76,7 @@ const QueryBar: React.FC<QueryBarProps> = ({ item, onSendRequest, isLoading, onI
         value={url}
         onChange={(e) => handleUrlChange(e.target.value)}
         placeholder="Enter request URL"
+        data-testid="query-bar-url"
         className="flex-1 min-w-0 px-3 text-xs font-normal"
         style={{
           fontFamily: 'var(--font-mono)',
@@ -95,6 +97,7 @@ const QueryBar: React.FC<QueryBarProps> = ({ item, onSendRequest, isLoading, onI
           onClick={onSendRequest}
           disabled={isLoading || !url.trim()}
           className="send font-semibold text-white disabled:cursor-not-allowed flex items-center gap-2 transition-all"
+          data-testid="query-bar-send"
         >
           {isLoading && (
             <div className="w-2.5 h-2.5 border-2 border-white border-t-transparent rounded-full animate-spin" />

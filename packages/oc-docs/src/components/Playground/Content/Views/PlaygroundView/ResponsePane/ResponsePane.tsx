@@ -81,7 +81,7 @@ const ResponsePane: React.FC<ResponsePaneProps> = ({ response, isLoading }) => {
 
   const statusInfo = (
     <div className="flex items-center gap-3 flex-wrap text-xs font-mono">
-      <span className="font-semibold" style={{ color: getStatusColor(response.status) }}>
+      <span className="font-semibold" style={{ color: getStatusColor(response.status) }} data-testid="response-status">
         {response.status} {response.statusText}
       </span>
       {response.duration != null && (
