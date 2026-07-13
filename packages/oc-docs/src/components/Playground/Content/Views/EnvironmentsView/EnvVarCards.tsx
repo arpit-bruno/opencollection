@@ -28,16 +28,18 @@ const EnvVarCards: React.FC<EnvVarCardsProps> = ({ rows, onChange }) => {
             <input
               className="name"
               data-testid={`env-var-name-${index}`}
+              placeholder="Name"
               value={row.name}
               onChange={(e) => update(index, { name: e.target.value })}
             />
             <div className="value">
               {row.secret ? (
-                <SecretValue value={row.value} onChange={(v) => update(index, { value: v })} />
+                <SecretValue value={row.value} placeholder="Value" onChange={(v) => update(index, { value: v })} />
               ) : (
                 <input
                   className="value-input"
                   data-testid={`env-var-value-${index}`}
+                  placeholder="Value"
                   value={row.value}
                   onChange={(e) => update(index, { value: e.target.value })}
                 />

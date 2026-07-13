@@ -141,6 +141,12 @@ export const StyledWrapper = styled.div`
     color: var(--oc-text);
   }
 
+  .env-card .name::placeholder,
+  .env-card .value-input::placeholder {
+    color: var(--oc-colors-text-subtext0);
+    opacity: 0.6;
+  }
+
   .env-card .datatype {
     flex-shrink: 0;
     font-size: var(--oc-font-size-sm);

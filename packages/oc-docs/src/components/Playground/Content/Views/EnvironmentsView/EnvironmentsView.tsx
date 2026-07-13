@@ -150,8 +150,8 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection, compact
       <KeyValueTable
         data={rows}
         onChange={onChange}
-        keyPlaceholder="Variable Name"
-        valuePlaceholder="Variable Value"
+        keyPlaceholder="Name"
+        valuePlaceholder="Value"
         showEnabled={true}
         disableNewRow={true}
         disableDelete={false}

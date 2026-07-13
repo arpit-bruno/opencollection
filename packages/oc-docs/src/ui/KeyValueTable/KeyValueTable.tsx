@@ -249,7 +249,7 @@ const KeyValueTable: React.FC<KeyValueTableProps> = ({
                         type="text"
                         className="text-input"
                         value={row.name}
-                        placeholder={isLastEmptyRow ? keyPlaceholder : ''}
+                        placeholder={disableNewRow || isLastEmptyRow ? keyPlaceholder : ''}
                         onChange={(e) => handleFieldChange(index, 'name', e.target.value)}
                         autoComplete="off"
                         autoCorrect="off"
@@ -260,7 +260,11 @@ const KeyValueTable: React.FC<KeyValueTableProps> = ({
                   </td>
                   <td className="col-value">
                     {row.secret ? (
-                      <SecretValue value={row.value} onChange={(v) => handleFieldChange(index, 'value', v)} />
+                      <SecretValue
+                        value={row.value}
+                        placeholder={disableNewRow || isLastEmptyRow ? valuePlaceholder : undefined}
+                        onChange={(v) => handleFieldChange(index, 'value', v)}
+                      />
                     ) : (
                       <input
                         ref={(el) => {
@@ -269,7 +273,7 @@ const KeyValueTable: React.FC<KeyValueTableProps> = ({
                         type="text"
                         className="text-input"
                         value={row.value}
-                        placeholder={isLastEmptyRow ? valuePlaceholder : ''}
+                        placeholder={disableNewRow || isLastEmptyRow ? valuePlaceholder : ''}
                         onChange={(e) => handleFieldChange(index, 'value', e.target.value)}
                         autoComplete="off"
                         autoCorrect="off"

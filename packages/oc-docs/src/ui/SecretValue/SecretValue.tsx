@@ -7,6 +7,7 @@ interface SecretValueProps {
   align?: 'between' | 'start';
   readOnly?: boolean;
   onChange?: (value: string) => void;
+  placeholder?: string;
   testId?: string;
 }
 
@@ -26,7 +27,7 @@ const EyeIcon: React.FC<{ off?: boolean }> = ({ off }) => (
   </svg>
 );
 
-export const SecretValue: React.FC<SecretValueProps> = ({ value = '', align = 'between', readOnly = false, onChange, testId = 'secret-value' }) => {
+export const SecretValue: React.FC<SecretValueProps> = ({ value = '', align = 'between', readOnly = false, onChange, placeholder, testId = 'secret-value' }) => {
   const [revealed, setRevealed] = useState(false);
   const editable = !!onChange && !readOnly;
   const showValue = revealed && !readOnly;
@@ -43,6 +44,7 @@ export const SecretValue: React.FC<SecretValueProps> = ({ value = '', align = 'b
           className="secret-value-input"
           type={revealed ? 'text' : 'password'}
           value={value}
+          placeholder={placeholder}
           readOnly={!revealed}
           onChange={(e) => onChange?.(e.target.value)}
           data-testid={testId ? `${testId}-input` : undefined}

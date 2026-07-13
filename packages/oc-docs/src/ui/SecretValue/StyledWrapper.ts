@@ -28,6 +28,9 @@ export const StyledWrapper = styled.span`
     font-family: var(--font-mono);
     padding: 0;
   }
+  .secret-value-input::placeholder {
+    color: var(--text-tertiary);
+  }
 
   &.secret-value--readonly .secret-value-text {
     color: var(--text-tertiary);
