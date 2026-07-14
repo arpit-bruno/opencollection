@@ -76,7 +76,7 @@ test.describe('playground docks (desktop)', () => {
 
     // Open request A in the playground.
     await requestPage.urlBar.tryButton.click();
-    await expect(playground.view).toContainText('Get Customers');
+    await expect(playground.view.getByTestId('query-bar-url')).toHaveValue(/\/billing\/customers/);
 
     // Leave it: open the Environments view via the gear.
     await playground.gear.click();
@@ -89,7 +89,7 @@ test.describe('playground docks (desktop)', () => {
 
     // It must show request A again, not the Environments view it was left on.
     await expect(playground.header).toBeVisible();
-    await expect(playground.view).toContainText('Get Customers');
+    await expect(playground.view.getByTestId('query-bar-url')).toHaveValue(/\/billing\/customers/);
     await expect(playground.view).not.toContainText('Environments');
   });
 
@@ -115,7 +115,7 @@ test.describe('playground docks (desktop)', () => {
     await page.goto(openAt('bottom'));
     await playground.treeItems.filter({ hasText: 'get users' }).first().click();
     await expect(page).toHaveURL(/pgReq=/);
-    await expect(playground.view).toContainText('get users');
+    await expect(playground.view.getByTestId('query-bar-url')).toHaveValue(/\/api\/users/);
 
     await playground.gear.click();
     await expect(playground.view).toContainText('Environments');
@@ -146,7 +146,7 @@ test.describe('playground docks (desktop)', () => {
     await expect(playground.sidebarPanel).toBeVisible();
     await playground.treeItems.filter({ hasText: 'get users' }).first().click();
     await expect(playground.sidebarPanel).toHaveCount(0);   // auto-closed on select
-    await expect(playground.view).toContainText('get users');
+    await expect(playground.view.getByTestId('query-bar-url')).toHaveValue(/\/api\/users/);
   });
 
   test('request and response stack when the playground is narrow and sit side-by-side when wide', async ({ page, playground }) => {
