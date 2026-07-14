@@ -47,7 +47,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           readOnly,
           minimap: { enabled: false },
           scrollBeyondLastLine: false,
-          fontSize: 14,
+          fontSize: 12,
           lineNumbers: 'on',
           roundedSelection: false,
           renderLineHighlight: 'none',
