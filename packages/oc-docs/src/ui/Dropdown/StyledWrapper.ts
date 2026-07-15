@@ -57,6 +57,10 @@ export const StyledWrapper = styled.div`
     border: 1px solid var(--oc-border-border0);
     border-radius: var(--oc-radius);
   }
+  .dropdown-menu.align-right {
+    left: auto;
+    right: 0;
+  }
 
   .dropdown-option {
     display: flex;

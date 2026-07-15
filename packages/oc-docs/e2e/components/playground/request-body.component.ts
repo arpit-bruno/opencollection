@@ -4,11 +4,13 @@ import { BaseComponent } from '../base.component';
 // the editor region each type renders. Open the tab via playground.selectTab('body').
 export class RequestBodyComponent extends BaseComponent {
   readonly typeSelect = this.page.getByTestId('body-type-select');
+  readonly typeTrigger = this.typeSelect.getByRole('button').first();
   readonly empty = this.page.getByTestId('body-empty');
   readonly multipart = this.page.getByTestId('body-multipart');
   readonly file = this.page.getByTestId('body-file');
 
   async selectType(value: string): Promise<void> {
-    await this.typeSelect.selectOption(value);
+    await this.typeTrigger.click();
+    await this.page.getByTestId(`body-type-option-${value}`).click();
   }
 }

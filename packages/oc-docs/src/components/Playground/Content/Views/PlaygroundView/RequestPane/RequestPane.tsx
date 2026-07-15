@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import type { HttpRequest } from '@opencollection/types/requests/http';
 import type { Assertion } from '@opencollection/types/common/assertions';
 import Tabs from '../../../../../../ui/Tabs/Tabs';
+import Dropdown from '../../../../../../ui/Dropdown/Dropdown';
+import { StyledWrapper } from './StyledWrapper';
 import { KeyValueRow } from '../../../../../../components/KeyValueTable/KeyValueTable';
 import { rowToVariable } from '../../../../../../utils/variableDataType';
 import HeadersTab from '../../Common/HeadersTab/HeadersTab';
@@ -25,6 +27,23 @@ import {
   getRequestUrl
 } from '../../../../../../utils/schemaHelpers';
 import { setUrlQueryParams } from '../../../../../../utils/pathParams';
+
+const BODY_TYPES = [
+  { id: 'none', label: 'No Body' },
+  { id: 'json', label: 'JSON' },
+  { id: 'text', label: 'Text' },
+  { id: 'xml', label: 'XML' },
+  { id: 'form-urlencoded', label: 'Form URL Encoded' },
+  { id: 'multipart-form', label: 'Multipart Form' },
+  { id: 'file', label: 'File / Binary' },
+  { id: 'sparql', label: 'SPARQL' }
+];
+
+const bodyTypeLabel = (id: string): string => {
+  if (id === 'json') return '{ } JSON';
+  if (id === 'xml') return '</> XML';
+  return BODY_TYPES.find((t) => t.id === id)?.label ?? 'No Body';
+};
 
 interface RequestPaneProps {
   item: HttpRequest;
@@ -112,6 +131,20 @@ const RequestPane: React.FC<RequestPaneProps> = ({ item, onItemChange }) => {
     });
   };
 
+  const handleBodyTypeChange = (bodyType: string) => {
+    // getHttpBody falls back to a legacy root-level body, so clearing only
+    // http.body lets the old body resurface — drop the root shadow too.
+    const applyBody = (body: unknown) => {
+      const next = { ...item, http: { ...item.http, body } } as any;
+      delete next.body;
+      onItemChange(next as HttpRequest);
+    };
+    if (bodyType === 'none') applyBody(undefined);
+    else if (['json', 'text', 'xml', 'sparql'].includes(bodyType)) applyBody({ type: bodyType, data: '' });
+    else if (bodyType === 'form-urlencoded') applyBody([]);
+    else if (bodyType === 'multipart-form' || bodyType === 'file') applyBody({ type: bodyType, data: [] });
+  };
+
   // Get values using helper functions
   const params = getHttpParams(item);
   const headers = getHttpHeaders(item);
@@ -120,6 +153,36 @@ const RequestPane: React.FC<RequestPaneProps> = ({ item, onItemChange }) => {
   const variables = getRequestVariables(item);
   const assertions = getRequestAssertions(item);
   const scriptsObj = scriptsArrayToObject(getRequestScripts(item));
+
+  const bodyType = !body ? 'none' : 'type' in body ? body.type : Array.isArray(body) ? 'form-urlencoded' : 'none';
+
+  const renderBodyTypeSelect = () => (
+    <Dropdown
+      label={bodyTypeLabel(bodyType)}
+      active={bodyType !== 'none'}
+      menuLabel="Body type"
+      align="right"
+      testId="body-type-select"
+    >
+      {({ close }) =>
+        BODY_TYPES.map((type) => (
+          <li key={type.id} role="option" aria-selected={type.id === bodyType}>
+            <button
+              type="button"
+              className={`dropdown-option${type.id === bodyType ? ' is-selected' : ''}`}
+              data-testid={`body-type-option-${type.id}`}
+              onClick={() => {
+                handleBodyTypeChange(type.id);
+                close();
+              }}
+            >
+              <span className="dropdown-label">{type.label}</span>
+            </button>
+          </li>
+        ))
+      }
+    </Dropdown>
+  );
 
   const renderParams = () => (
     <ParamsTab
@@ -217,11 +280,12 @@ const RequestPane: React.FC<RequestPaneProps> = ({ item, onItemChange }) => {
       contentIndicator: headers?.length || undefined, 
       content: <div className="py-3">{renderHeaders()}</div> 
     },
-    { 
-      id: 'body', 
+    {
+      id: 'body',
       label: 'Body',
       contentIndicator: hasBody ? '•' : undefined,
-      content: <div className="py-3">{renderBody()}</div> 
+      rightElement: renderBodyTypeSelect(),
+      content: <div className="py-3">{renderBody()}</div>
     },
     { 
       id: 'auth', 
@@ -250,13 +314,13 @@ const RequestPane: React.FC<RequestPaneProps> = ({ item, onItemChange }) => {
   ];
 
   return (
-    <div className="h-full" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <StyledWrapper>
       <Tabs
         tabs={tabs}
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />
-    </div>
+    </StyledWrapper>
   );
 };
 
