@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SECRET_MASK } from '../../constants';
+import { cx } from '../../utils/cx';
 import { StyledWrapper } from './StyledWrapper';
 
 interface SecretValueProps {
@@ -34,9 +35,10 @@ export const SecretValue: React.FC<SecretValueProps> = ({ value = '', align = 'b
 
   return (
     <StyledWrapper
-      className={['secret-value', align === 'start' ? 'secret-value--start' : '', readOnly ? 'secret-value--readonly' : '']
-        .filter(Boolean)
-        .join(' ')}
+      className={cx('secret-value', {
+        'secret-value--start': align === 'start',
+        'secret-value--readonly': readOnly
+      }, 'px-2')}
       data-testid={testId}
     >
       {editable ? (
