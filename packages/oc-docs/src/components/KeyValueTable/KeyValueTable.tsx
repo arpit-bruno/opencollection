@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React from 'react';
 import { useResolvedVariables } from '../../hooks/useVariableResolver';
+import { useEditableRows } from '../../hooks/useEditableRows';
 import { Tooltip } from '../../ui/Tooltip/Tooltip';
 import { WarningIcon } from '../../assets/icons';
 import HighlightedInput from '../HighlightedInput/HighlightedInput';
@@ -33,6 +34,8 @@ interface KeyValueTableProps {
   additionalColumns?: AdditionalColumn[];
   className?: string;
   disableNewRow?: boolean;
+  makeNewRow?: () => Partial<KeyValueRow>;
+  addWhenComplete?: boolean;
   disableDelete?: boolean;
   showActions?: boolean;
   readOnlyKey?: boolean;
@@ -44,8 +47,6 @@ interface KeyValueTableProps {
   testId?: string;
 }
 
-const generateId = () => `row_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
 const KeyValueTable: React.FC<KeyValueTableProps> = ({
   data,
   onChange,
@@ -55,6 +56,8 @@ const KeyValueTable: React.FC<KeyValueTableProps> = ({
   additionalColumns = [],
   className = '',
   disableNewRow = false,
+  makeNewRow,
+  addWhenComplete = false,
   disableDelete = false,
   showActions = true,
   readOnlyKey = false,
@@ -66,139 +69,7 @@ const KeyValueTable: React.FC<KeyValueTableProps> = ({
   testId = 'key-value-table'
 }) => {
   const { isFound, names } = useResolvedVariables();
-  const isEditingRef = useRef(false);
-  const previousDataRef = useRef<string>('');
-
-  const [rows, setRows] = useState<KeyValueRow[]>(() => {
-    if (disableNewRow) {
-      return data.map((row, idx) => ({ ...row, id: row.id || `row-${idx}` }));
-    }
-
-    const hasEmptyRow = data.length > 0 &&
-      (!data[data.length - 1].name || data[data.length - 1].name.trim() === '');
-
-    if (hasEmptyRow) {
-      return data.map((row, idx) => ({ ...row, id: row.id || `row-${idx}` }));
-    }
-
-    return [
-      ...data.map((row, idx) => ({ ...row, id: row.id || `row-${idx}` })),
-      {
-        id: generateId(),
-        name: '',
-        value: '',
-        enabled: true
-      }
-    ];
-  });
-
-  useEffect(() => {
-    if (isEditingRef.current) {
-      return;
-    }
-
-    const dataString = JSON.stringify(data);
-    if (dataString === previousDataRef.current) {
-      return;
-    }
-    previousDataRef.current = dataString;
-
-    if (disableNewRow) {
-      const newRows = data.map((row, idx) => ({ ...row, id: row.id || `row-${idx}` }));
-      setRows(newRows);
-      return;
-    }
-
-    const hasEmptyRow = data.length > 0 &&
-      (!data[data.length - 1].name || data[data.length - 1].name.trim() === '');
-
-    const newRows = hasEmptyRow
-      ? data.map((row, idx) => ({ ...row, id: row.id || `row-${idx}` }))
-      : [
-          ...data.map((row, idx) => ({ ...row, id: row.id || `row-${idx}` })),
-          {
-            id: generateId(),
-            name: '',
-            value: '',
-            enabled: true
-          }
-        ];
-
-    setRows(newRows);
-  }, [data, disableNewRow]);
-
-  const notifyChange = useCallback((updatedRows: KeyValueRow[]) => {
-    const nonEmptyRows = updatedRows.filter(row =>
-      row.name && row.name.trim() !== ''
-    );
-    onChange(nonEmptyRows);
-  }, [onChange]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      isEditingRef.current = false;
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [rows]);
-
-  const handleFieldChange = (index: number, field: string, value: any) => {
-    isEditingRef.current = true;
-
-    const updatedRows = [...rows];
-    const currentRow = updatedRows[index];
-    const oldName = currentRow.name;
-    updatedRows[index] = { ...currentRow, [field]: value };
-
-    if (!disableNewRow) {
-      const isLastRow = index === rows.length - 1;
-      const wasNameEmpty = !oldName || oldName.trim() === '';
-      const isNowTyping = field === 'name' && value && value.trim() !== '';
-
-      if (isLastRow && isNowTyping && wasNameEmpty) {
-        updatedRows.push({
-          id: generateId(),
-          name: '',
-          value: '',
-          enabled: true
-        });
-      }
-    }
-
-    setRows(updatedRows);
-    notifyChange(updatedRows);
-  };
-
-  const handleRemoveRow = useCallback((index: number) => {
-    setRows((prevRows) => {
-      const row = prevRows[index];
-      const isLastRow = index === prevRows.length - 1;
-      const isEmptyRow = !row.name || row.name.trim() === '';
-
-      if (isLastRow && isEmptyRow) {
-        return prevRows;
-      }
-
-      const updatedRows = prevRows.filter((_, i) => i !== index);
-
-      if (!disableNewRow) {
-        const hasEmptyLastRow = updatedRows.length > 0 &&
-          (!updatedRows[updatedRows.length - 1].name ||
-           updatedRows[updatedRows.length - 1].name.trim() === '');
-
-        if (!hasEmptyLastRow) {
-          updatedRows.push({
-            id: generateId(),
-            name: '',
-            value: '',
-            enabled: true
-          });
-        }
-      }
-
-      notifyChange(updatedRows);
-      return updatedRows;
-    });
-  }, [disableNewRow, notifyChange]);
+  const { rows, updateField, removeRow } = useEditableRows(data, onChange, { disableNewRow, makeNewRow, addWhenComplete });
 
   const cellError = (row: KeyValueRow, index: number, field: 'name' | 'value') => {
     const message = getRowError?.(row, index, field);
@@ -241,13 +112,13 @@ const KeyValueTable: React.FC<KeyValueTableProps> = ({
               const isLastRow = index === rows.length - 1;
               const isEmptyRow = !row.name || row.name.trim() === '';
               const isLastEmptyRow = isLastRow && isEmptyRow;
-              const updateField = (field: string, value: unknown) => handleFieldChange(index, field, value);
+              const updateCell = (field: string, value: unknown) => updateField(index, field, value);
 
               const deleteButton = (
                 <button
                   type="button"
                   className="delete-button"
-                  onClick={() => handleRemoveRow(index)}
+                  onClick={() => removeRow(index)}
                   aria-label="Delete row"
                   title="Delete row"
                 >
@@ -279,7 +150,7 @@ const KeyValueTable: React.FC<KeyValueTableProps> = ({
                               className="checkbox-input"
                               checked={row.enabled}
                               aria-label={row.name ? `Enable ${row.name}` : 'Enable row'}
-                              onChange={(e) => handleFieldChange(index, 'enabled', e.target.checked)}
+                              onChange={(e) => updateField(index, 'enabled', e.target.checked)}
                             />
                           )}
                         </span>
@@ -292,7 +163,7 @@ const KeyValueTable: React.FC<KeyValueTableProps> = ({
                         <HighlightedInput
                           value={row.name}
                           placeholder={isLastEmptyRow ? keyPlaceholder : ''}
-                          onValueChange={(v) => handleFieldChange(index, 'name', v)}
+                          onValueChange={(v) => updateField(index, 'name', v)}
                           isFound={isFound}
                           names={names}
                           anywordHints={keyAutocomplete}
@@ -312,13 +183,13 @@ const KeyValueTable: React.FC<KeyValueTableProps> = ({
                             <SecretValue
                               value={row.value}
                               placeholder={valuePlaceholder}
-                              onChange={(v) => handleFieldChange(index, 'value', v)}
+                              onChange={(v) => updateField(index, 'value', v)}
                             />
                           ) : (
                             <HighlightedInput
                               value={row.value}
                               placeholder={isLastEmptyRow ? valuePlaceholder : ''}
-                              onValueChange={(v) => handleFieldChange(index, 'value', v)}
+                              onValueChange={(v) => updateField(index, 'value', v)}
                               isFound={isFound}
                               names={names}
                               anywordHints={valueAutocomplete}
@@ -331,7 +202,7 @@ const KeyValueTable: React.FC<KeyValueTableProps> = ({
                         {!isLastEmptyRow && (
                           <div className="value-cell-trailing">
                             {additionalColumns.map((col) => (
-                              <React.Fragment key={col.key}>{col.render(row, index, updateField)}</React.Fragment>
+                              <React.Fragment key={col.key}>{col.render(row, index, updateCell)}</React.Fragment>
                             ))}
                             {showActions && !disableDelete && deleteButton}
                           </div>
@@ -341,13 +212,13 @@ const KeyValueTable: React.FC<KeyValueTableProps> = ({
                       <SecretValue
                         value={row.value}
                         placeholder={valuePlaceholder}
-                        onChange={(v) => handleFieldChange(index, 'value', v)}
+                        onChange={(v) => updateField(index, 'value', v)}
                       />
                     ) : (
                       <HighlightedInput
                         value={row.value}
                         placeholder={isLastEmptyRow ? valuePlaceholder : ''}
-                        onValueChange={(v) => handleFieldChange(index, 'value', v)}
+                        onValueChange={(v) => updateField(index, 'value', v)}
                         isFound={isFound}
                         names={names}
                         anywordHints={valueAutocomplete}
@@ -359,7 +230,7 @@ const KeyValueTable: React.FC<KeyValueTableProps> = ({
                   {!inlineActions &&
                     additionalColumns.map((col) => (
                       <td key={col.key} className={`col-${col.key}`}>
-                        {!isLastEmptyRow && col.render(row, index, updateField)}
+                        {!isLastEmptyRow && col.render(row, index, updateCell)}
                       </td>
                     ))}
                   {!inlineActions && showActions && (

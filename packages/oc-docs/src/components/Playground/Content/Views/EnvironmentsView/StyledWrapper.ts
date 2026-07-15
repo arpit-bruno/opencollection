@@ -149,6 +149,7 @@ export const StyledWrapper = styled.div`
 
   .env-card .datatype {
     flex-shrink: 0;
+    margin-left: auto;
     font-size: var(--oc-font-size-sm);
     color: var(--oc-colors-text-subtext1);
   }

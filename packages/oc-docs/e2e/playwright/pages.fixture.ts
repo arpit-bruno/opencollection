@@ -9,6 +9,7 @@ import { SidebarComponent } from '../components/sidebar.component';
 import { TooltipComponent } from '../components/tooltip.component';
 import { PlaygroundComponent } from '../components/playground.component';
 import { RequestBodyComponent } from '../components/playground/request-body.component';
+import { EnvEditorComponent } from '../components/environments/env-editor.component';
 import { CollectionSettingsComponent } from '../components/collection-settings/collection-settings.component';
 import { ThemeToggleComponent } from '../components/layout/theme-toggle.component';
 import { PageHeaderComponent } from '../components/layout/page-header.component';
@@ -28,6 +29,7 @@ type Fixtures = {
   tooltip: TooltipComponent;
   playground: PlaygroundComponent;
   requestBody: RequestBodyComponent;
+  envEditor: EnvEditorComponent;
   collectionSettings: CollectionSettingsComponent;
   pageHeader: PageHeaderComponent;
   envSwitcher: EnvSwitcherComponent;
@@ -73,6 +75,9 @@ export const test = base.extend<Fixtures>({
   },
   requestBody: async ({ page }, use) => {
     await use(new RequestBodyComponent(page));
+  },
+  envEditor: async ({ page }, use) => {
+    await use(new EnvEditorComponent(page));
   },
   collectionSettings: async ({ page }, use) => {
     await use(new CollectionSettingsComponent(page));

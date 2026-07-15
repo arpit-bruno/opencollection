@@ -12,7 +12,7 @@ import { GlobeIcon } from '../../../../../assets/icons';
 import { useAppDispatch } from '../../../../../store/hooks';
 import { humanizeType, writeBackValue } from '../../../../../utils/environments';
 import { isSecretVariable, unwrapVariableValue } from '../../../../../utils/variableResolution';
-import { getVariableTypeLabel } from '../../../../../utils/request';
+import { getVariableType } from '../../../../../utils/request';
 import { updateCollectionEnvironments } from '@slices/playground';
 
 const ENV_TABS = [
@@ -35,7 +35,7 @@ export const variableToRow = (variable: Variable, index: number): KeyValueRow =>
     id: `var-${index}`,
     name: variable.name || '',
     value: unwrapVariableValue(variable.value),
-    dataType: getVariableTypeLabel(variable) || '',
+    dataType: humanizeType(getVariableType(variable)),
     enabled: !variable.disabled,
     secret: isSecretVariable(variable),
     source: variable
@@ -148,9 +148,18 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection, compact
     );
   }
 
-  const renderVars = (rows: KeyValueRow[], onChange: (rows: KeyValueRow[]) => void): React.ReactNode =>
+  interface RenderVarsOptions {
+    makeNewRow?: () => Partial<KeyValueRow>;
+    disableNewRow?: boolean;
+  }
+
+  const renderVars = (
+    rows: KeyValueRow[],
+    onChange: (rows: KeyValueRow[]) => void,
+    { makeNewRow, disableNewRow = false }: RenderVarsOptions = {}
+  ): React.ReactNode =>
     compact ? (
-      <EnvVarCards rows={rows} onChange={onChange} />
+      <EnvVarCards rows={rows} onChange={onChange} makeNewRow={makeNewRow} disableNewRow={disableNewRow} addWhenComplete />
     ) : (
       <KeyValueTable
         data={rows}
@@ -158,7 +167,9 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection, compact
         keyPlaceholder="Name"
         valuePlaceholder="Value"
         showEnabled={true}
-        disableNewRow={true}
+        disableNewRow={disableNewRow}
+        makeNewRow={makeNewRow}
+        addWhenComplete
         disableDelete={false}
         additionalColumns={[{ key: 'dataType', label: 'Data Type', render: (row) => <span className="text-readonly">{row.dataType || ''}</span> }]}
       />
@@ -167,25 +178,17 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection, compact
   const panels: Record<EnvTabId, { contentIndicator: number; content: React.ReactNode }> = {
     variables: {
       contentIndicator: plainRows.length,
-      content: (
-        <TabPanel isEmpty={!plainRows.length} heading="No variables" subheading="This environment has no variables yet.">
-          {renderVars(plainRows, (rows) => commit(rows, secretRows))}
-        </TabPanel>
-      )
+      content: renderVars(plainRows, (rows) => commit(rows, secretRows))
     },
     secrets: {
       contentIndicator: secretRows.length,
-      content: (
-        <TabPanel isEmpty={!secretRows.length} heading="No secrets" subheading="This environment has no secret variables yet.">
-          {renderVars(secretRows, (rows) => commit(plainRows, rows))}
-        </TabPanel>
-      )
+      content: renderVars(secretRows, (rows) => commit(plainRows, rows), { makeNewRow: () => ({ secret: true }) })
     },
     external: {
       contentIndicator: externalRows.length,
       content: (
         <TabPanel isEmpty={!externalRows.length} heading="No external secrets" subheading="This environment has no external secrets configured.">
-          {renderVars(externalRows, commitExternal)}
+          {renderVars(externalRows, commitExternal, { disableNewRow: true })}
         </TabPanel>
       )
     }
