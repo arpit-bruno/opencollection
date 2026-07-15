@@ -10,7 +10,7 @@ import { EnvironmentLabel } from '../../../../EnvironmentLabel/EnvironmentLabel'
 import EnvVarCards from './EnvVarCards';
 import { GlobeIcon } from '../../../../../assets/icons';
 import { useAppDispatch } from '../../../../../store/hooks';
-import { isSecretVariable, resolveValue, humanizeType } from '../../../../../utils/environments';
+import { isSecretVariable, resolveValue, humanizeType, writeBackValue } from '../../../../../utils/environments';
 import { updateCollectionEnvironments } from '@slices/playground';
 
 const ENV_TABS = [
@@ -28,7 +28,7 @@ interface ExternalSecretRow {
   type?: VariableValueType;
 }
 
-const variableToRow = (variable: Variable, index: number): KeyValueRow => {
+export const variableToRow = (variable: Variable, index: number): KeyValueRow => {
   const resolved = resolveValue(variable.value);
   return {
     id: `var-${index}`,
@@ -36,17 +36,20 @@ const variableToRow = (variable: Variable, index: number): KeyValueRow => {
     value: resolved.value,
     dataType: resolved.value ? humanizeType(resolved.type) : '',
     enabled: !variable.disabled,
-    secret: isSecretVariable(variable)
+    secret: isSecretVariable(variable),
+    source: variable
   };
 };
 
-const rowToVariable = (row: KeyValueRow): Variable =>
-  ({
-    name: row.name,
-    value: row.value,
-    disabled: !row.enabled,
-    ...(row.secret ? { secret: true } : {})
-  } as Variable);
+export const rowToVariable = (row: KeyValueRow): Variable => {
+  const source = (row.source as Variable | undefined) ?? ({} as Variable);
+  if (row.secret) {
+    const secret = { ...source, name: row.name, disabled: !row.enabled, secret: true } as Variable & { value?: unknown };
+    delete secret.value;
+    return secret;
+  }
+  return { ...source, name: row.name, value: writeBackValue(source.value, row.value), disabled: !row.enabled };
+};
 
 interface TabPanelProps {
   isEmpty: boolean;

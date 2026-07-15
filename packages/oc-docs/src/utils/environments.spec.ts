@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getEnvironmentVariables } from './environments';
+import { getEnvironmentVariables, resolveValue, writeBackValue } from './environments';
 
 describe('getEnvironmentVariables', () => {
   it('splits regular and secret variables', () => {
@@ -149,5 +149,41 @@ describe('getEnvironmentVariables', () => {
       'AWS Secrets Manager'
     );
     expect(getEnvironmentVariables(withType('azure-key-vault')).externalSecrets?.typeLabel).toBe('Azure Key Vault');
+  });
+});
+
+describe('writeBackValue', () => {
+  it('keeps a plain string a string', () => {
+    expect(writeBackValue('old', 'new')).toBe('new');
+    expect(writeBackValue(undefined, 'new')).toBe('new');
+  });
+
+  it('preserves a typed value wrapper and only swaps the data', () => {
+    expect(writeBackValue({ type: 'number', data: '30' }, '42')).toEqual({ type: 'number', data: '42' });
+  });
+
+  it('preserves the variant array and edits only the selected variant', () => {
+    const variants = [
+      { title: 'dev', value: 'https://dev.api.local', selected: true },
+      { title: 'prod', value: 'https://prod.api.local' }
+    ];
+    expect(writeBackValue(variants, 'https://edited.local')).toEqual([
+      { title: 'dev', value: 'https://edited.local', selected: true },
+      { title: 'prod', value: 'https://prod.api.local' }
+    ]);
+  });
+
+  it('edits the first variant when none is marked selected (matches resolveValue)', () => {
+    const variants = [{ title: 'a', value: 'x' }, { title: 'b', value: 'y' }];
+    expect(writeBackValue(variants, 'z')).toEqual([{ title: 'a', value: 'z' }, { title: 'b', value: 'y' }]);
+  });
+
+  it('round-trips the shapes that resolveValue flattened', () => {
+    const cases = ['plain', { type: 'number', data: '30' }, [{ title: 'dev', value: 'v', selected: true }]] as const;
+    for (const original of cases) {
+      const flat = resolveValue(original).value;
+      // no edit → writing the resolved value back leaves the original shape intact
+      expect(writeBackValue(original, flat)).toEqual(original);
+    }
   });
 });

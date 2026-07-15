@@ -35,6 +35,19 @@ export const resolveValue = (value: VariableValueOrVariants | undefined): { valu
   return { value: typeof value.data === 'string' ? value.data : '', type: value.type ?? 'string' };
 };
 
+// keeps the value's original shape
+export const writeBackValue = (
+  original: VariableValueOrVariants | undefined,
+  edited: string
+): VariableValueOrVariants => {
+  if (Array.isArray(original)) {
+    const selected = Math.max(0, original.findIndex((variant) => variant.selected));
+    return original.map((variant, index) => (index === selected ? { ...variant, value: edited } : variant));
+  }
+  if (original && typeof original === 'object') return { ...original, data: edited };
+  return edited;
+};
+
 interface ExternalSecretsConfig {
   type?: string;
   variables?: { name?: string; secretName?: string; enabled?: boolean; type?: VariableValueType }[];
