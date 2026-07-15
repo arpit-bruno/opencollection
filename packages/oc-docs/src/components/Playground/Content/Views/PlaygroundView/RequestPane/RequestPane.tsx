@@ -239,7 +239,8 @@ const RequestPane: React.FC<RequestPaneProps> = ({ item, onItemChange }) => {
 
   return (
     <div className="h-full" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      <Tabs 
+      <Tabs
+        testId="request-tabs"
         tabs={tabs}
         activeTab={activeTab}
         onTabChange={setActiveTab}

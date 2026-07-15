@@ -58,6 +58,7 @@ export const BodyTab: React.FC<BodyTabProps> = ({
             Body Type:
           </span>
           <select
+            data-testid="body-type-select"
             value={
               !body ? 'none' :
               'type' in body ? body.type :
@@ -119,7 +120,7 @@ export const BodyTab: React.FC<BodyTabProps> = ({
       </div>
 
       {!body ? (
-        <div className="text-center py-6 border-2 border-dashed rounded" style={{ borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}>
+        <div data-testid="body-empty" className="text-center py-6 border-2 border-dashed rounded" style={{ borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}>
           No body content. Select a body type to add content.
         </div>
       ) : 'data' in body && typeof body.data === 'string' ? (
@@ -188,7 +189,7 @@ export const BodyTab: React.FC<BodyTabProps> = ({
           const fileEntries = entries.filter(e => e?.type === 'file');
 
           return (
-            <div>
+            <div data-testid="body-multipart">
               <div className="mb-4">
                 <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                   Multipart Form
@@ -222,7 +223,7 @@ export const BodyTab: React.FC<BodyTabProps> = ({
           const selected = variants.find(v => v?.selected) || variants[0];
 
           return (
-            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            <div data-testid="body-file" className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               <div className="mb-1 font-medium" style={{ color: 'var(--text-primary)' }}>File / Binary</div>
               <div>Path: {selected?.filePath || '(no file selected)'}</div>
               <div className="mt-1">The file isn&apos;t read in the browser preview, so the request runs without the file body.</div>
