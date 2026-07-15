@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import type { Folder } from '@opencollection/types/collection/item';
 import type { OpenCollection } from '@opencollection/types';
 import Tabs from '../../../../../ui/Tabs/Tabs';
-import { type KeyValueRow } from '../../../../../ui/KeyValueTable/KeyValueTable';
+import { type KeyValueRow } from '../../../../../components/KeyValueTable/KeyValueTable';
+import { rowToVariable } from '../../../../../utils/variableDataType';
 import HeadersTab from '../Common/HeadersTab/HeadersTab';
 import VariablesTab from '../Common/VariablesTab/VariablesTab';
-import AuthTab from '../Common/AuthTab';
+import AuthTab from '../Common/AuthTab/AuthTab';
 import ScriptsTab from '../Common/ScriptsTab/ScriptsTab';
 import { useAppDispatch } from '../../../../../store/hooks';
 import { updateFolderInCollection } from '@slices/playground';
 import {
+  countEnabled,
   getItemDocs,
   getItemName,
   scriptsArrayToObject,
@@ -29,11 +31,19 @@ const FolderSettings: React.FC<FolderSettingsProps> = ({ folder, onFolderChange 
   const [activeTab, setActiveTab] = useState('overview');
 
   const handleHeadersChange = (headers: KeyValueRow[]) => {
-    const updatedHeaders = headers.map((h) => ({
-      name: h.name,
-      value: h.value,
-      disabled: !h.enabled
-    }));
+    const originals = folder.request?.headers ?? [];
+    const originalByName = new Map(
+      originals.filter((header) => header.name).map((header): [string, typeof header] => [header.name as string, header])
+    );
+    const updatedHeaders = headers.map((h) => {
+      const description = 'description' in h ? h.description : originalByName.get(h.name)?.description;
+      return {
+        name: h.name,
+        value: h.value,
+        disabled: !h.enabled,
+        ...(description !== undefined ? { description } : {})
+      };
+    });
 
     const updatedFolder = {
       ...folder,
@@ -51,17 +61,11 @@ const FolderSettings: React.FC<FolderSettingsProps> = ({ folder, onFolderChange 
   };
 
   const handleVariablesChange = (variables: KeyValueRow[]) => {
-    const updatedVariables = variables.map((v) => ({
-      name: v.name,
-      value: v.value,
-      disabled: !v.enabled
-    }));
-
     const updatedFolder = {
       ...folder,
       request: {
         ...folder.request,
-        variables: updatedVariables
+        variables: variables.map(rowToVariable)
       }
     };
 
@@ -129,8 +133,8 @@ const FolderSettings: React.FC<FolderSettingsProps> = ({ folder, onFolderChange 
     <HeadersTab
       headers={folder.request?.headers || []}
       onHeadersChange={handleHeadersChange}
-      description="Request headers that will be sent with every request inside this folder."
       title=""
+      description="Request headers that will be sent with every request inside this folder."
     />
   );
 
@@ -139,7 +143,7 @@ const FolderSettings: React.FC<FolderSettingsProps> = ({ folder, onFolderChange 
       variables={folder.request?.variables || []}
       onVariablesChange={handleVariablesChange}
       title=""
-      description="Pre Request"
+      description="Variables available to every request inside this folder."
     />
   );
 
@@ -162,9 +166,9 @@ const FolderSettings: React.FC<FolderSettingsProps> = ({ folder, onFolderChange 
     <ScriptsTab
       scripts={scripts}
       onScriptChange={handleScriptChange}
+      title=""
       description="Pre and post-request scripts that will run before and after any request inside this folder is sent."
       showTests={false}
-      title=""
     />
   );
 
@@ -172,6 +176,7 @@ const FolderSettings: React.FC<FolderSettingsProps> = ({ folder, onFolderChange 
     <TestsTab
       scripts={scripts}
       onScriptChange={handleScriptChange}
+      title=""
       description="These tests will run any time a request in this folder is sent."
     />
   );
@@ -185,7 +190,7 @@ const FolderSettings: React.FC<FolderSettingsProps> = ({ folder, onFolderChange 
     {
       id: 'headers',
       label: 'Headers',
-      contentIndicator: folder.request?.headers?.filter((header) => !header.disabled)?.length || undefined,
+      contentIndicator: countEnabled(folder.request?.headers),
       content: renderHeaders()
     },
     {
@@ -201,7 +206,7 @@ const FolderSettings: React.FC<FolderSettingsProps> = ({ folder, onFolderChange 
     {
       id: 'variables',
       label: 'Vars',
-      contentIndicator: folder.request?.variables?.filter((variable) => !variable.disabled)?.length || undefined,
+      contentIndicator: countEnabled(folder.request?.variables),
       content: renderVariables()
     },
     {
@@ -220,14 +225,7 @@ const FolderSettings: React.FC<FolderSettingsProps> = ({ folder, onFolderChange 
       </div>
 
       <div className="flex-1 overflow-hidden mt-4">
-        <Tabs
-          tabs={tabs.map((tab) => ({
-            ...tab,
-            content: <div className="py-3">{tab.content}</div>
-          }))}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-        />
+        <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
     </div>
   );
