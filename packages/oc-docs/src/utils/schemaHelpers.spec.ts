@@ -43,12 +43,20 @@ describe('getRequestBadgeLabel', () => {
 });
 
 describe('getRequestAuth', () => {
-  it('reads auth from the protocol block first', () => {
-    expect(getRequestAuth(item({ http: { auth: { type: 'bearer' } } }))).toEqual({ type: 'bearer' });
+  it('lets the protocol block win over a request-block auth', () => {
+    expect(
+      getRequestAuth(item({ http: { auth: { type: 'bearer' } }, request: { auth: { type: 'apikey' } } }))
+    ).toEqual({ type: 'bearer' });
   });
 
   it('reads auth nested under a request block (flat-shape requests)', () => {
     expect(getRequestAuth(item({ method: 'POST', request: { auth: { type: 'apikey' } } }))).toEqual({ type: 'apikey' });
+  });
+
+  it('falls back to request.auth when a protocol block exists without auth', () => {
+    expect(getRequestAuth(item({ http: { body: { type: 'json' } }, request: { auth: { type: 'apikey' } } }))).toEqual({
+      type: 'apikey'
+    });
   });
 
   it('treats a cleared request-block auth as no auth', () => {
