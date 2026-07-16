@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { HttpRequest } from '@opencollection/types/requests/http';
 import type { Assertion } from '@opencollection/types/common/assertions';
+import type { Action, ActionSetVariable } from '@opencollection/types/common/actions';
 import Tabs from '../../../../../../ui/Tabs/Tabs';
 import Dropdown from '../../../../../../ui/Dropdown/Dropdown';
 import { StyledWrapper } from './StyledWrapper';
@@ -44,6 +45,9 @@ const bodyTypeLabel = (id: string): string => {
   if (id === 'xml') return '</> XML';
   return BODY_TYPES.find((t) => t.id === id)?.label ?? 'No Body';
 };
+
+const isAfterResponseSetVariable = (action: Action): action is ActionSetVariable =>
+  action.type === 'set-variable' && action.phase === 'after-response';
 
 interface RequestPaneProps {
   item: HttpRequest;
@@ -131,6 +135,19 @@ const RequestPane: React.FC<RequestPaneProps> = ({ item, onItemChange }) => {
     });
   };
 
+  const handlePostResponseVarsChange = (rows: KeyValueRow[]) => {
+    const otherActions = (item.runtime?.actions ?? []).filter((action) => !isAfterResponseSetVariable(action));
+    const postActions: ActionSetVariable[] = rows.map((row) => ({
+      type: 'set-variable',
+      phase: 'after-response',
+      selector: { expression: row.value, method: 'jsonq' },
+      variable: { name: row.name, scope: row.scope || 'runtime' },
+      disabled: !row.enabled,
+      ...(row.description !== undefined ? { description: row.description } : {})
+    }));
+    onItemChange({ ...item, runtime: { ...item.runtime, actions: [...otherActions, ...postActions] } });
+  };
+
   const handleBodyTypeChange = (bodyType: string) => {
     // getHttpBody falls back to a legacy root-level body, so clearing only
     // http.body lets the old body resurface — drop the root shadow too.
@@ -151,6 +168,13 @@ const RequestPane: React.FC<RequestPaneProps> = ({ item, onItemChange }) => {
   const body = getHttpBody(item);
   const auth = getRequestAuth(item);
   const variables = getRequestVariables(item);
+  const postResponseVars = (item.runtime?.actions ?? []).filter(isAfterResponseSetVariable).map((action) => ({
+    name: action.variable?.name,
+    expr: action.selector?.expression,
+    disabled: action.disabled,
+    scope: action.variable?.scope,
+    description: action.description
+  }));
   const assertions = getRequestAssertions(item);
   const scriptsObj = scriptsArrayToObject(getRequestScripts(item));
 
@@ -195,6 +219,8 @@ const RequestPane: React.FC<RequestPaneProps> = ({ item, onItemChange }) => {
     <VariablesTab
       variables={variables}
       onVariablesChange={handleRequestVariablesChange}
+      postResponseVars={postResponseVars}
+      onPostResponseVarsChange={handlePostResponseVarsChange}
       title="Request Variables"
       description="These variables will be available to this request"
     />
