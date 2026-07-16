@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { OpenCollection } from '@opencollection/types';
 import type { Environment } from '@opencollection/types/config/environments';
-import type { Variable, VariableValueType } from '@opencollection/types/common/variables';
+import type { Variable } from '@opencollection/types/common/variables';
 import KeyValueTable, { KeyValueRow } from '../../../../../components/KeyValueTable/KeyValueTable';
 import Tabs from '../../../../../ui/Tabs/Tabs';
 import { EmptyState } from '../../../../../ui/EmptyState/EmptyState';
@@ -23,12 +23,15 @@ const ENV_TABS = [
 
 type EnvTabId = (typeof ENV_TABS)[number]['id'];
 
-interface ExternalSecretRow {
-  name?: string;
-  secretName?: string;
-  enabled?: boolean;
-  type?: VariableValueType;
-}
+// Local mirror: @opencollection/types@0.9.2 dist doesn't export SecretProviderType (importing it fails tsc).
+type SecretProviderType = 'hashicorp-vault-cloud' | 'hashicorp-vault-server' | 'aws-secrets-manager' | 'azure-key-vault';
+
+const SECRET_POINTER_FIELD: Record<SecretProviderType, 'path' | 'secretName' | 'vaultName'> = {
+  'hashicorp-vault-cloud': 'path',
+  'hashicorp-vault-server': 'path',
+  'aws-secrets-manager': 'secretName',
+  'azure-key-vault': 'vaultName'
+};
 
 export const variableToRow = (variable: Variable, index: number): KeyValueRow => {
   return {
@@ -80,14 +83,15 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection, compact
   const plainRows = allVariables.filter((v) => !isSecretVariable(v)).map(variableToRow);
   const secretRows = allVariables.filter((v) => isSecretVariable(v)).map(variableToRow);
 
+  const secretProviderType = selectedEnvironment?.externalSecrets?.type as SecretProviderType | undefined;
+  const secretPointerField = (secretProviderType && SECRET_POINTER_FIELD[secretProviderType]) || 'secretName';
+
   const externalRows: KeyValueRow[] = (selectedEnvironment?.externalSecrets?.variables ?? []).map(
-    (variable: ExternalSecretRow, index: number) => ({
+    (variable: { name?: string; disabled?: boolean }, index: number) => ({
       id: `ext-${index}`,
       name: variable.name ?? '',
-      value: variable.secretName ?? '',
-      enabled: variable.enabled !== false,
-      dataType: variable.type ? humanizeType(variable.type) : '',
-      varType: variable.type
+      value: (variable as Record<string, string | undefined>)[secretPointerField] ?? '',
+      enabled: variable.disabled !== true
     })
   );
 
@@ -119,9 +123,8 @@ const EnvironmentsView: React.FC<EnvironmentsViewProps> = ({ collection, compact
         ...(selectedEnvironment?.externalSecrets ?? {}),
         variables: rows.map((row) => ({
           name: row.name,
-          secretName: row.value,
-          enabled: row.enabled,
-          ...(row.varType ? { type: row.varType } : {})
+          [secretPointerField]: row.value,
+          disabled: !row.enabled
         }))
       }
     });

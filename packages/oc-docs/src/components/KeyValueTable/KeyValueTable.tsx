@@ -15,7 +15,7 @@ export interface KeyValueRow {
   [key: string]: any;
 }
 
-export interface AdditionalColumn {
+interface AdditionalColumn {
   key: string;
   label: string;
   render: (
