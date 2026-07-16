@@ -13,10 +13,10 @@ describe('getEnvironmentVariables', () => {
     };
     const { variables, secretVariables } = getEnvironmentVariables(env);
     expect(variables).toEqual([
-      { name: 'baseUrl', value: 'https://api.test', dataType: 'String', disabled: false }
+      { name: 'baseUrl', value: 'https://api.test', dataType: 'string', disabled: false }
     ]);
     expect(secretVariables).toEqual([
-      { name: 'authToken', value: '', dataType: 'String', disabled: false }
+      { name: 'authToken', value: '', dataType: 'string', disabled: false }
     ]);
   });
 
@@ -43,9 +43,9 @@ describe('getEnvironmentVariables', () => {
       ]
     };
     expect(getEnvironmentVariables(env).variables.map((v) => `${v.name}:${v.value}:${v.dataType}`)).toEqual([
-      'count:8842:Number',
-      'enabled:true:Boolean',
-      'payload:{}:Object'
+      'count:8842:number',
+      'enabled:true:boolean',
+      'payload:{}:object'
     ]);
   });
 
@@ -62,7 +62,7 @@ describe('getEnvironmentVariables', () => {
         }
       ]
     };
-    expect(getEnvironmentVariables(env).variables[0]).toMatchObject({ value: 'eu-west-1', dataType: 'String' });
+    expect(getEnvironmentVariables(env).variables[0]).toMatchObject({ value: 'eu-west-1', dataType: 'string' });
   });
 
   it('leaves an untyped secret data type empty and marks disabled rows', () => {
@@ -123,7 +123,7 @@ describe('getEnvironmentVariables', () => {
         ]
       }
     };
-    expect(getEnvironmentVariables(env).externalSecrets?.variables.map((v) => v.dataType)).toEqual(['String', '']);
+    expect(getEnvironmentVariables(env).externalSecrets?.variables.map((v) => v.dataType)).toEqual(['string', '']);
   });
 
   it('is null when there are no external secret variables', () => {
