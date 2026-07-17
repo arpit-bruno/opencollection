@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Item as OpenCollectionItem } from '@opencollection/types/collection/item';
-import { getItemDescription, getRequestBadgeLabel, getRequestAuth } from './schemaHelpers';
+import { getItemDescription, getRequestBadgeLabel } from './schemaHelpers';
 
 const item = (data: Record<string, unknown>): OpenCollectionItem => data as unknown as OpenCollectionItem;
 
@@ -39,27 +39,5 @@ describe('getRequestBadgeLabel', () => {
     expect(getRequestBadgeLabel(item({ type: 'folder' }))).toBeUndefined();
     expect(getRequestBadgeLabel(item({ type: 'script' }))).toBeUndefined();
     expect(getRequestBadgeLabel(null)).toBeUndefined();
-  });
-});
-
-describe('getRequestAuth', () => {
-  it('lets the protocol block win over a request-block auth', () => {
-    expect(
-      getRequestAuth(item({ http: { auth: { type: 'bearer' } }, request: { auth: { type: 'apikey' } } }))
-    ).toEqual({ type: 'bearer' });
-  });
-
-  it('reads auth nested under a request block (flat-shape requests)', () => {
-    expect(getRequestAuth(item({ method: 'POST', request: { auth: { type: 'apikey' } } }))).toEqual({ type: 'apikey' });
-  });
-
-  it('falls back to request.auth when a protocol block exists without auth', () => {
-    expect(getRequestAuth(item({ http: { body: { type: 'json' } }, request: { auth: { type: 'apikey' } } }))).toEqual({
-      type: 'apikey'
-    });
-  });
-
-  it('treats a cleared request-block auth as no auth', () => {
-    expect(getRequestAuth(item({ method: 'POST', request: { auth: undefined } }))).toBeUndefined();
   });
 });

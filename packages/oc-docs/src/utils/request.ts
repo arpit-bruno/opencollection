@@ -12,7 +12,7 @@ import type { PropertyRow } from '../components/PropertyTable/PropertyTable';
 import type { Auth } from '@opencollection/types/common/auth';
 import type { Scripts } from '@opencollection/types/common/scripts';
 import type { Variable, SecretVariable, VariableValue, VariableValueType } from '@opencollection/types/common/variables';
-import type { Action, ActionSetVariable } from '@opencollection/types/common/actions';
+import type { Action } from '@opencollection/types/common/actions';
 import {
   getRequestAuth,
   getItemName,
@@ -409,23 +409,6 @@ export interface PostResponseVarRow {
   disabled?: boolean;
 }
 
-// Editable post-response variable used by VariablesTab (expr = capture expression).
-export interface PostResponseVar {
-  name?: string;
-  expr?: string;
-  disabled?: boolean;
-  scope?: string;
-  description?: unknown;
-}
-
-export interface PostResponseRowInput {
-  name?: string;
-  value?: string;
-  enabled?: boolean;
-  scope?: string;
-  description?: unknown;
-}
-
 const flattenValue = (value: Variable['value']): string => {
   if (value == null) return '';
   if (typeof value === 'string') return value;
@@ -446,7 +429,7 @@ const toPreRequestVarRow = (variable: Variable): PreRequestVarRow => ({
   disabled: variable.disabled
 });
 
-export const isAfterResponseSetVariable = (action: Action): action is ActionSetVariable =>
+const isAfterResponseCapture = (action: Action): boolean =>
   action.type === 'set-variable' && (action.phase ?? 'after-response') === 'after-response';
 
 const toPostResponseVarRow = (action: Action): PostResponseVarRow => ({
@@ -461,30 +444,7 @@ export const getPreRequestVars = (item: HttpRequest): PreRequestVarRow[] =>
   getRequestVariables(item).map(toPreRequestVarRow);
 
 export const getPostResponseVars = (item: HttpRequest): PostResponseVarRow[] =>
-  (item.runtime?.actions ?? []).filter(isAfterResponseSetVariable).map(toPostResponseVarRow);
-
-// Bridge the OC actions model (after-response set-variable) to the editable Variables rows, and back.
-export const actionsToPostResponseVars = (actions: Action[] = []): PostResponseVar[] =>
-  actions.filter(isAfterResponseSetVariable).map((action) => ({
-    name: action.variable?.name,
-    expr: action.selector?.expression,
-    disabled: action.disabled,
-    scope: action.variable?.scope,
-    description: action.description
-  }));
-
-export const postResponseVarsToActions = (rows: PostResponseRowInput[], actions: Action[] = []): Action[] => {
-  const others = actions.filter((action) => !isAfterResponseSetVariable(action));
-  const postActions: ActionSetVariable[] = rows.map((row) => ({
-    type: 'set-variable',
-    phase: 'after-response',
-    selector: { expression: row.value ?? '', method: 'jsonq' },
-    variable: { name: row.name ?? '', scope: row.scope || 'runtime' },
-    disabled: !row.enabled,
-    ...(row.description !== undefined ? { description: row.description } : {})
-  }));
-  return [...others, ...postActions];
-};
+  (item.runtime?.actions ?? []).filter(isAfterResponseCapture).map(toPostResponseVarRow);
 
 type RequestDefaultsHolder =
   | { request?: { variables?: Variable[]; actions?: Action[] } }
@@ -501,7 +461,7 @@ export const getRequestDefaultsVars = (
     .map(toPreRequestVarRow);
 
   const postVars = (request.actions ?? [])
-    .filter((a) => isAfterResponseSetVariable(a) && Boolean(a.variable?.name))
+    .filter((a) => isAfterResponseCapture(a) && Boolean(a.variable?.name))
     .map(toPostResponseVarRow);
 
   return { preVars, postVars };

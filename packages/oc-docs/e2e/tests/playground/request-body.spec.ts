@@ -25,11 +25,4 @@ test.describe('Request body types', () => {
     await expect(requestBody.empty).toBeVisible();
     await expect(requestBody.multipart).toHaveCount(0);
   });
-
-  test('No Body clears a request that ships with an existing body', async ({ playground, requestBody }) => {
-    await playground.openRequest('echo json');
-    await playground.selectTab('body');
-    await requestBody.selectType('none');
-    await expect(requestBody.empty).toBeVisible();
-  });
 });

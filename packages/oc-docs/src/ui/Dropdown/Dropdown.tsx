@@ -12,8 +12,6 @@ interface DropdownProps {
   menuLabel: string;
   /** Menu content; receives `close` to dismiss after a selection. */
   children: (api: { close: () => void }) => React.ReactNode;
-  /** Which edge the menu aligns to. Use `right` when the trigger sits at the far right. */
-  align?: 'left' | 'right';
   testId?: string;
 }
 
@@ -23,7 +21,7 @@ interface DropdownProps {
  * render-prop and call `close` after a selection. Options should use the
  * `dropdown-option` / `dropdown-label` classes for consistent styling.
  */
-export const Dropdown: React.FC<DropdownProps> = ({ label, active = false, menuLabel, children, align = 'left', testId }) => {
+export const Dropdown: React.FC<DropdownProps> = ({ label, active = false, menuLabel, children, testId }) => {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
@@ -62,7 +60,7 @@ export const Dropdown: React.FC<DropdownProps> = ({ label, active = false, menuL
       </button>
 
       {open && (
-        <ul id={menuId} className={`dropdown-menu${align === 'right' ? ' align-right' : ''}`} role="listbox" aria-label={menuLabel}>
+        <ul id={menuId} className="dropdown-menu" role="listbox" aria-label={menuLabel}>
           {children({ close })}
         </ul>
       )}

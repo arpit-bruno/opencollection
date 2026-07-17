@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import type { HttpRequest } from '@opencollection/types/requests/http';
 import { StyledWrapper } from './StyledWrapper';
+import MenuDropdown from '../../../../../../ui/MenuDropdown';
 import { getHttpMethod, getRequestUrl, getHttpParams } from '../../../../../../utils/schemaHelpers';
 import { syncPathParams, syncQueryParams } from '../../../../../../utils/pathParams';
-import { methodColorVars } from '../../../../../../theme/methodColors';
-import { MethodBadge } from '../../../../../MethodBadge/MethodBadge';
-import { CopyButton } from '../../../../../../ui/CopyButton/CopyButton';
+import { methodColorVars, getMethodColorVar } from '../../../../../../theme/methodColors';
 
 interface QueryBarProps {
   item: HttpRequest;
@@ -52,25 +51,35 @@ const QueryBar: React.FC<QueryBarProps> = ({ item, onSendRequest, isLoading, onI
     onItemChange(updatedItem);
   };
 
+  const getMethodColor = getMethodColorVar;
+
   return (
-    <StyledWrapper className="flex items-center">
+    <StyledWrapper 
+      className="flex items-stretch"
+      style={{ 
+        height: '36px'
+      }}
+    >
       <div className="method-select-wrapper">
-        <span aria-hidden="true">
-          <MethodBadge method={method} />
-        </span>
-        <select
-          className="method-select"
-          value={method}
-          onChange={(e) => handleMethodChange(e.target.value)}
-          aria-label="HTTP method"
-          data-testid="query-bar-method"
+        <MenuDropdown
+          selectedItemId={method}
+          placement="bottom-start"
+          items={Object.keys(methodColorVars).map((m) => ({
+            id: m,
+            label: <span style={{ color: getMethodColor(m) }}>{m}</span>,
+            ariaLabel: m,
+            onClick: () => handleMethodChange(m)
+          }))}
         >
-          {Object.keys(methodColorVars).map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
+          <button
+            type="button"
+            className="method-select h-full"
+            aria-label="HTTP method"
+            style={{ color: getMethodColor(method) }}
+          >
+            {method}
+          </button>
+        </MenuDropdown>
       </div>
 
       <input
@@ -78,8 +87,7 @@ const QueryBar: React.FC<QueryBarProps> = ({ item, onSendRequest, isLoading, onI
         value={url}
         onChange={(e) => handleUrlChange(e.target.value)}
         placeholder="Enter request URL"
-        data-testid="query-bar-url"
-        className="flex-1 min-w-0 px-3 text-xs font-normal"
+        className="flex-1 px-3 text-xs font-normal"
         style={{
           fontFamily: 'var(--font-mono)',
           fontSize: '12px',
@@ -92,21 +100,16 @@ const QueryBar: React.FC<QueryBarProps> = ({ item, onSendRequest, isLoading, onI
         }}
       />
 
-      <div className="actions">
-        <CopyButton text={url} label="Copy URL" copiedLabel="Copied" testId="query-bar-copy-url" />
-        <button
-          type="button"
-          onClick={onSendRequest}
-          disabled={isLoading || !url.trim()}
-          className="send font-semibold text-white disabled:cursor-not-allowed flex items-center gap-2 transition-all"
-          data-testid="query-bar-send"
-        >
-          {isLoading && (
-            <div className="w-2.5 h-2.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          )}
-          {isLoading ? 'Sending' : 'Send'}
-        </button>
-      </div>
+      <button
+        onClick={onSendRequest}
+        disabled={isLoading || !url.trim()}
+        className="send px-4 uppercase text-xs font-semibold text-white disabled:cursor-not-allowed flex items-center gap-2 transition-all"
+      >
+        {isLoading && (
+          <div className="w-2.5 h-2.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        )}
+        {isLoading ? 'Sending' : 'Send'}
+      </button>
     </StyledWrapper>
   );
 };
