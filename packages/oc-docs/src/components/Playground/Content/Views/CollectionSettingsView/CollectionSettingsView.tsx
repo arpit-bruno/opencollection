@@ -79,9 +79,9 @@ const CollectionSettings: React.FC<CollectionSettingsProps> = ({ collection }) =
       id: 'overview',
       label: 'Overview',
       content: (
-        <OverviewTab 
-          docs={getItemDocs(collection)} 
-          emptyStateSubheading="This collection has no docs. Add one in Bruno to introduce your API to readers: what it does, who it's for, and how to authenticate." 
+        <OverviewTab
+          docs={getItemDocs(collection)}
+          emptyStateSubheading="This collection has no docs. Add one in Bruno to introduce your API to readers: what it does, who it's for, and how to authenticate."
         />
       )
     },

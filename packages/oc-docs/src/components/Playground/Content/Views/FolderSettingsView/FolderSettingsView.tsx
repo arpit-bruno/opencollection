@@ -128,9 +128,9 @@ const FolderSettings: React.FC<FolderSettingsProps> = ({ folder, onFolderChange 
   };
 
   const renderOverview = () => (
-    <OverviewTab 
-      docs={getItemDocs(folder)} 
-      emptyStateSubheading="This folder has no docs. Add one in Bruno to introduce your API to readers: what it does, who it's for, and how to authenticate." 
+    <OverviewTab
+      docs={getItemDocs(folder)}
+      emptyStateSubheading="This folder has no docs. Add one in Bruno to introduce your API to readers: what it does, who it's for, and how to authenticate."
     />
   );
 
